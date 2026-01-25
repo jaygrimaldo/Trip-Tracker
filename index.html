@@ -155,6 +155,13 @@
             color: white;
         }
         
+        .btn-export {
+            background: #f59e0b;
+            color: white;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
         button:active {
             transform: scale(0.98);
         }
@@ -336,6 +343,9 @@
         
         <div class="saved-trips">
             <h2 style="margin-bottom: 20px;">📋 Saved Trips</h2>
+            <button class="btn-export" onclick="exportTrips()" id="exportBtn" style="display: none;">
+                📤 Export All Trips to File
+            </button>
             <div id="tripsList"></div>
         </div>
     </div>
@@ -527,6 +537,63 @@
                     </div>
                 `;
             }).join('');
+            
+            // Show export button if there are trips
+            document.getElementById('exportBtn').style.display = 'block';
+        }
+        
+        function exportTrips() {
+            if (trips.length === 0) {
+                alert('No trips to export!');
+                return;
+            }
+            
+            // Convert trips to format compatible with Python tracker
+            const exportData = {
+                trips: trips.map(trip => ({
+                    drive_number: trip.driveNumber,
+                    destination: trip.destination,
+                    miles: trip.miles,
+                    vehicle: trip.vehicle,
+                    trip_type: trip.tripType,
+                    num_days: trip.numDays,
+                    start_date: formatDateForPython(trip.startDate),
+                    daily_hours: trip.dailyHours,
+                    total_hours: trip.totalHours,
+                    tips: trip.tips,
+                    meal_expenses: trip.meals,
+                    weather: trip.weather || null,
+                    maintenance: trip.maintenance || null,
+                    added_timestamp: trip.savedAt
+                })),
+                exported_at: new Date().toISOString(),
+                source: 'web_form'
+            };
+            
+            // Create downloadable file
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            // Create download link and trigger it
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `bus_trips_export_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert(`✅ ${trips.length} trip(s) exported!\n\nSave this file to OneDrive, then import it in your Python tracker.`);
+        }
+        
+        function formatDateForPython(dateStr) {
+            // Convert YYYY-MM-DD to MM/DD/YY format for Python tracker
+            const date = new Date(dateStr);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            return `${month}/${day}/${year}`;
         }
         
         // Initialize on load
