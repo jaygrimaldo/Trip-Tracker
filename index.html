@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Trip Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 1.8em;
+            font-weight: 300;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+        
+        .form-section {
+            padding: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.95em;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .time-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .time-input-group input {
+            flex: 2;
+        }
+        
+        .time-input-group select {
+            flex: 1;
+            min-width: 80px;
+        }
+        
+        .day-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .day-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .day-section.completed {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .day-section.completed h3 {
+            color: #10b981;
+        }
+        
+        .calculated-hours {
+            background: #e0e7ff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-weight: 600;
+            color: #667eea;
+            text-align: center;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .total-summary {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .total-summary h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .total-summary .big-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-export {
+            background: #f59e0b;
+            color: white;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .step.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .step.completed {
+            background: #10b981;
+            color: white;
+        }
+        
+        .in-progress-banner {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .in-progress-banner h3 {
+            color: #92400e;
+            margin-bottom: 5px;
+        }
+        
+        .in-progress-banner p {
+            color: #a16207;
+            font-size: 0.9em;
+        }
+        
+        .saved-trips {
+            background: #f8f9fa;
+            padding: 25px;
+            border-top: 3px solid #667eea;
+        }
+        
+        .trip-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .trip-card.in-progress {
+            border: 2px solid #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .trip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .trip-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .trip-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .status-badge.in-progress {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-badge.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .trip-details {
+            display: grid;
+            gap: 8px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .detail-row {
+            display: flex;
+            padding: 6px 0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            min-width: 140px;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+        }
+        
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        
+        .continue-btn {
+            background: #f59e0b;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .no-trips {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .problem-day {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .daily-breakdown {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .daily-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚌 Trip Data Collector</h1>
+            <p>Track your trip details day by day</p>
+        </div>
+        
+        <div class="form-section">
+            <!-- In Progress Banner (shows when resuming a trip) -->
+            <div class="in-progress-banner hidden" id="inProgressBanner">
+                <h3>📋 Trip In Progress</h3>
+                <p id="inProgressInfo"></p>
+            </div>
+            
+            <!-- Step 1: Trip Info -->
+            <div id="step1">
+                <div class="step-indicator">
+                    <div class="step active" id="stepDot1">1</div>
+                    <div class="step" id="stepDot2">2</div>
+                    <div class="step" id="stepDot3">3</div>
+                </div>
+                
+                <h2 style="margin-bottom: 20px; color: #667eea;">Step 1: Trip Information</h2>
+                
+                <div class="form-group">
+                    <label for="driveNumber">Drive Number</label>
+                    <input type="text" id="driveNumber" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="destination">Destination</label>
+                    <input type="text" id="destination" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="vehicle">Vehicle</label>
+                    <input type="text" id="vehicle" placeholder="e.g., 841, C-32" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tripType">Trip Type</label>
+                    <select id="tripType" required onchange="updateNumDays()">
+                        <option value="">Select type...</option>
+                        <option value="Day Trip">Day Trip</option>
+                        <option value="Overnight">Overnight</option>
+                        <option value="Multi-Day">Multi-Day</option>
+                        <option value="Relay">Relay</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="numDays">Number of Days</label>
+                    <select id="numDays" required>
+                        <option value="1">1 Day</option>
+                        <option value="2">2 Days</option>
+                        <option value="3">3 Days</option>
+                        <option value="4">4 Days</option>
+                        <option value="5">5 Days</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn-primary" onclick="startTrip()">Start Trip →</button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Daily Tracking -->
+            <div id="step2" class="hidden">
+                <div class="step-indicator">
+                    <div class="step completed" id="stepDot1b">✓</div>
+                    <div class="step active" id="stepDot2b">2</div>
+                    <div class="step" id="stepDot3b">3</div>
+                </div>
+                
+                <h2 style="margin-bottom: 20px; color: #667eea;">Step 2: Daily Log</h2>
+                
+                <div id="dailySections">
+                    <!-- Day sections will be generated here -->
+                </div>
+                
+                <div class="total-summary" id="totalSummary">
+                    <h3>Running Total</h3>
+                    <div class="big-number" id="runningTotalHours">0.0 hours</div>
+                    <div id="runningTotalMiles">0 miles</div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="goToStep(1)">← Back</button>
+                    <button type="button" class="btn-warning" onclick="saveProgress()">💾 Save Progress</button>
+                    <button type="button" class="btn-primary" onclick="goToStep(3)">Next →</button>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <button type="button" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer;" onclick="cancelTrip()">❌ Cancel This Trip</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Final Details -->
+            <div id="step3" class="hidden">
+                <div class="step-indicator">
+                    <div class="step completed">✓</div>
+                    <div class="step completed">✓</div>
+                    <div class="step active">3</div>
+                </div>
+                
+                <h2 style="margin-bottom: 20px; color: #667eea;">Step 3: Final Details</h2>
+                
+                <div class="form-group">
+                    <label for="tips">Tips Received ($)</label>
+                    <input type="number" id="tips" step="0.01" value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="meals">Meal Expenses ($)</label>
+                    <input type="number" id="meals" step="0.01" value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="weather">Weather/Traffic Notes (optional)</label>
+                    <textarea id="weather" rows="2" placeholder="e.g., 20 degrees at pickup, heavy rain"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="maintenance">Maintenance Notes (optional)</label>
+                    <textarea id="maintenance" rows="2" placeholder="e.g., Low tire pressure warning"></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="goToStep(2)">← Back</button>
+                    <button type="button" class="btn-success" onclick="completeTrip()">✅ Complete Trip</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="saved-trips">
+            <h2 style="margin-bottom: 20px;">📋 Saved Trips</h2>
+            <button class="btn-export hidden" onclick="exportTrips()" id="exportBtn">
+                📤 Export All Completed Trips
+            </button>
+            <div id="tripsList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize
+        let trips = JSON.parse(localStorage.getItem('busTrips') || '[]');
+        let currentTrip = JSON.parse(localStorage.getItem('currentTrip') || 'null');
+        let currentStep = 1;
+        
+        // Set today's date as default
+        document.getElementById('startDate').valueAsDate = new Date();
+        
+        // Check for in-progress trip on load
+        if (currentTrip) {
+            resumeTrip();
+        }
+        
+        function updateNumDays() {
+            const tripType = document.getElementById('tripType').value;
+            const numDaysSelect = document.getElementById('numDays');
+            
+            if (tripType === 'Day Trip' || tripType === 'Relay') {
+                numDaysSelect.value = '1';
+            } else if (tripType === 'Overnight') {
+                numDaysSelect.value = '2';
+            }
+        }
+        
+        function startTrip() {
+            // Validate Step 1
+            const driveNumber = document.getElementById('driveNumber').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const vehicle = document.getElementById('vehicle').value.trim();
+            const tripType = document.getElementById('tripType').value;
+            const numDays = parseInt(document.getElementById('numDays').value);
+            const startDate = document.getElementById('startDate').value;
+            
+            if (!driveNumber || !destination || !vehicle || !tripType || !startDate) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Create current trip object
+            currentTrip = {
+                id: Date.now(),
+                driveNumber: driveNumber,
+                destination: destination,
+                vehicle: vehicle,
+                tripType: tripType,
+                numDays: numDays,
+                startDate: startDate,
+                days: [],
+                status: 'in-progress',
+                startedAt: new Date().toISOString()
+            };
+            
+            // Initialize days array
+            for (let i = 0; i < numDays; i++) {
+                currentTrip.days.push({
+                    dayNumber: i + 1,
+                    startTime: '',
+                    startPeriod: 'AM',
+                    endTime: '',
+                    endPeriod: 'PM',
+                    hours: 0,
+                    miles: 0,
+                    completed: false
+                });
+            }
+            
+            saveCurrentTrip();
+            generateDaySections();
+            goToStep(2);
+        }
+        
+        function generateDaySections() {
+            const container = document.getElementById('dailySections');
+            container.innerHTML = '';
+            
+            currentTrip.days.forEach((day, index) => {
+                const dayNum = index + 1;
+                const completedClass = day.completed ? 'completed' : '';
+                
+                container.innerHTML += `
+                    <div class="day-section ${completedClass}" id="daySection${dayNum}">
+                        <h3>Day ${dayNum} ${day.completed ? '✓' : ''}</h3>
+                        
+                        <div class="form-group">
+                            <label>Shift Start Time</label>
+                            <div class="time-input-group">
+                                <input type="text" id="startTime${dayNum}" placeholder="7:30" 
+                                       value="${day.startTime}" onchange="calculateDayHours(${dayNum})">
+                                <select id="startPeriod${dayNum}" onchange="calculateDayHours(${dayNum})">
+                                    <option value="AM" ${day.startPeriod === 'AM' ? 'selected' : ''}>AM</option>
+                                    <option value="PM" ${day.startPeriod === 'PM' ? 'selected' : ''}>PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Shift End Time</label>
+                            <div class="time-input-group">
+                                <input type="text" id="endTime${dayNum}" placeholder="4:00" 
+                                       value="${day.endTime}" onchange="calculateDayHours(${dayNum})">
+                                <select id="endPeriod${dayNum}" onchange="calculateDayHours(${dayNum})">
+                                    <option value="AM" ${day.endPeriod === 'AM' ? 'selected' : ''}>AM</option>
+                                    <option value="PM" ${day.endPeriod === 'PM' ? 'selected' : ''}>PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="calculated-hours" id="calcHours${dayNum}">
+                            ${day.hours > 0 ? day.hours.toFixed(1) + ' hours' : 'Enter times to calculate hours'}
+                        </div>
+                        ${day.hours > 8 ? '<div class="warning">⚠️ Over 8 hours - Problem day</div>' : ''}
+                        
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>Miles Driven Day ${dayNum}</label>
+                            <input type="number" id="miles${dayNum}" step="0.1" value="${day.miles || ''}" 
+                                   onchange="updateMiles(${dayNum})" placeholder="Enter miles">
+                        </div>
+                    </div>
+                `;
+            });
+            
+            updateRunningTotals();
+        }
+        
+        function parseTime(timeStr, period) {
+            if (!timeStr) return null;
+            
+            // Handle formats like "7:30", "7:30", "730", "7"
+            let hours, minutes;
+            
+            if (timeStr.includes(':')) {
+                const parts = timeStr.split(':');
+                hours = parseInt(parts[0]);
+                minutes = parseInt(parts[1]) || 0;
+            } else {
+                // Handle "730" as 7:30 or "7" as 7:00
+                if (timeStr.length >= 3) {
+                    hours = parseInt(timeStr.slice(0, -2));
+                    minutes = parseInt(timeStr.slice(-2));
+                } else {
+                    hours = parseInt(timeStr);
+                    minutes = 0;
+                }
+            }
+            
+            if (isNaN(hours)) return null;
+            
+            // Convert to 24-hour format
+            if (period === 'PM' && hours !== 12) {
+                hours += 12;
+            } else if (period === 'AM' && hours === 12) {
+                hours = 0;
+            }
+            
+            return hours + (minutes / 60);
+        }
+        
+        function calculateDayHours(dayNum) {
+            const startTime = document.getElementById(`startTime${dayNum}`).value;
+            const startPeriod = document.getElementById(`startPeriod${dayNum}`).value;
+            const endTime = document.getElementById(`endTime${dayNum}`).value;
+            const endPeriod = document.getElementById(`endPeriod${dayNum}`).value;
+            
+            const startDecimal = parseTime(startTime, startPeriod);
+            const endDecimal = parseTime(endTime, endPeriod);
+            
+            if (startDecimal === null || endDecimal === null) {
+                document.getElementById(`calcHours${dayNum}`).textContent = 'Enter times to calculate hours';
+                return;
+            }
+            
+            let hours = endDecimal - startDecimal;
+            
+            // Handle overnight shift (end time is next day)
+            if (hours < 0) {
+                hours += 24;
+            }
+            
+            // Update current trip data
+            currentTrip.days[dayNum - 1].startTime = startTime;
+            currentTrip.days[dayNum - 1].startPeriod = startPeriod;
+            currentTrip.days[dayNum - 1].endTime = endTime;
+            currentTrip.days[dayNum - 1].endPeriod = endPeriod;
+            currentTrip.days[dayNum - 1].hours = hours;
+            currentTrip.days[dayNum - 1].completed = (hours > 0);
+            
+            // Update display
+            const calcDiv = document.getElementById(`calcHours${dayNum}`);
+            calcDiv.textContent = `${hours.toFixed(1)} hours`;
+            
+            // Add warning for problem days
+            const daySection = document.getElementById(`daySection${dayNum}`);
+            const existingWarning = daySection.querySelector('.warning');
+            if (hours > 8 && !existingWarning) {
+                const warning = document.createElement('div');
+                warning.className = 'warning';
+                warning.textContent = '⚠️ Over 8 hours - Problem day';
+                calcDiv.after(warning);
+            } else if (hours <= 8 && existingWarning) {
+                existingWarning.remove();
+            }
+            
+            // Mark section as completed
+            if (hours > 0) {
+                daySection.classList.add('completed');
+            }
+            
+            updateRunningTotals();
+            saveCurrentTrip();
+        }
+        
+        function updateMiles(dayNum) {
+            const miles = parseFloat(document.getElementById(`miles${dayNum}`).value) || 0;
+            currentTrip.days[dayNum - 1].miles = miles;
+            updateRunningTotals();
+            saveCurrentTrip();
+        }
+        
+        function updateRunningTotals() {
+            let totalHours = 0;
+            let totalMiles = 0;
+            
+            currentTrip.days.forEach(day => {
+                totalHours += day.hours || 0;
+                totalMiles += day.miles || 0;
+            });
+            
+            document.getElementById('runningTotalHours').textContent = `${totalHours.toFixed(1)} hours`;
+            document.getElementById('runningTotalMiles').textContent = `${totalMiles} miles`;
+        }
+        
+        function saveCurrentTrip() {
+            localStorage.setItem('currentTrip', JSON.stringify(currentTrip));
+        }
+        
+        function saveProgress() {
+            saveCurrentTrip();
+            alert('✅ Progress saved! You can close the app and come back later.');
+        }
+        
+        function cancelTrip() {
+            if (confirm('❌ Are you sure you want to cancel this trip? All data for this trip will be deleted.')) {
+                currentTrip = null;
+                localStorage.removeItem('currentTrip');
+                clearForm();
+                alert('Trip cancelled.');
+            }
+        }
+        
+        function resumeTrip() {
+            // Show in-progress banner
+            document.getElementById('inProgressBanner').classList.remove('hidden');
+            document.getElementById('inProgressInfo').textContent = 
+                `Drive #${currentTrip.driveNumber} to ${currentTrip.destination}`;
+            
+            // Populate Step 1 fields (in case they go back)
+            document.getElementById('driveNumber').value = currentTrip.driveNumber;
+            document.getElementById('destination').value = currentTrip.destination;
+            document.getElementById('vehicle').value = currentTrip.vehicle;
+            document.getElementById('tripType').value = currentTrip.tripType;
+            document.getElementById('numDays').value = currentTrip.numDays;
+            document.getElementById('startDate').value = currentTrip.startDate;
+            
+            // Generate day sections and go to step 2
+            generateDaySections();
+            goToStep(2);
+        }
+        
+        function goToStep(step) {
+            currentStep = step;
+            
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.add('hidden');
+            
+            document.getElementById(`step${step}`).classList.remove('hidden');
+            
+            // Hide in-progress banner if going back to step 1
+            if (step === 1) {
+                document.getElementById('inProgressBanner').classList.add('hidden');
+            }
+        }
+        
+        function completeTrip() {
+            // Gather all data
+            const dailyHours = currentTrip.days.map(d => d.hours);
+            const dailyMiles = currentTrip.days.map(d => d.miles);
+            const totalHours = dailyHours.reduce((a, b) => a + b, 0);
+            const totalMiles = dailyMiles.reduce((a, b) => a + b, 0);
+            
+            if (totalHours === 0) {
+                alert('Please enter your shift times before completing the trip.');
+                goToStep(2);
+                return;
+            }
+            
+            const completedTrip = {
+                id: currentTrip.id,
+                driveNumber: currentTrip.driveNumber,
+                destination: currentTrip.destination,
+                vehicle: currentTrip.vehicle,
+                tripType: currentTrip.tripType,
+                startDate: currentTrip.startDate,
+                numDays: currentTrip.numDays,
+                days: currentTrip.days,
+                dailyHours: dailyHours,
+                dailyMiles: dailyMiles,
+                totalHours: totalHours,
+                miles: totalMiles,
+                tips: parseFloat(document.getElementById('tips').value) || 0,
+                meals: parseFloat(document.getElementById('meals').value) || 0,
+                weather: document.getElementById('weather').value,
+                maintenance: document.getElementById('maintenance').value,
+                status: 'completed',
+                savedAt: new Date().toISOString()
+            };
+            
+            // Add to trips array
+            trips.unshift(completedTrip);
+            localStorage.setItem('busTrips', JSON.stringify(trips));
+            
+            // Clear current trip
+            currentTrip = null;
+            localStorage.removeItem('currentTrip');
+            
+            alert('✅ Trip completed and saved!');
+            
+            // Reset form
+            clearForm();
+            displayTrips();
+        }
+        
+        function clearForm() {
+            document.getElementById('driveNumber').value = '';
+            document.getElementById('destination').value = '';
+            document.getElementById('vehicle').value = '';
+            document.getElementById('tripType').value = '';
+            document.getElementById('numDays').value = '1';
+            document.getElementById('startDate').valueAsDate = new Date();
+            document.getElementById('tips').value = '0';
+            document.getElementById('meals').value = '0';
+            document.getElementById('weather').value = '';
+            document.getElementById('maintenance').value = '';
+            document.getElementById('inProgressBanner').classList.add('hidden');
+            
+            currentTrip = null;
+            goToStep(1);
+        }
+        
+        function deleteTrip(id) {
+            if (confirm('Delete this trip?')) {
+                trips = trips.filter(t => t.id !== id);
+                localStorage.setItem('busTrips', JSON.stringify(trips));
+                displayTrips();
+            }
+        }
+        
+        function continueTrip(id) {
+            // Find the in-progress trip in the saved trips
+            const trip = trips.find(t => t.id === id);
+            if (trip) {
+                currentTrip = trip;
+                // Remove from saved trips since it's now current
+                trips = trips.filter(t => t.id !== id);
+                localStorage.setItem('busTrips', JSON.stringify(trips));
+                saveCurrentTrip();
+                resumeTrip();
+                displayTrips();
+            }
+        }
+        
+        function displayTrips() {
+            const container = document.getElementById('tripsList');
+            
+            // Separate completed and in-progress trips
+            const completedTrips = trips.filter(t => t.status === 'completed');
+            const inProgressTrips = trips.filter(t => t.status === 'in-progress');
+            
+            if (trips.length === 0 && !currentTrip) {
+                container.innerHTML = '<div class="no-trips">No saved trips yet.<br>Fill out the form above to get started!</div>';
+                document.getElementById('exportBtn').classList.add('hidden');
+                return;
+            }
+            
+            let html = '';
+            
+            // Show in-progress trips first
+            inProgressTrips.forEach(trip => {
+                const date = new Date(trip.startDate);
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                
+                html += `
+                    <div class="trip-card in-progress">
+                        <div class="trip-header">
+                            <div>
+                                <div class="trip-title">${trip.destination}</div>
+                                <div class="trip-date">${formattedDate}</div>
+                            </div>
+                            <span class="status-badge in-progress">⏳ In Progress</span>
+                        </div>
+                        
+                        <div class="trip-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Drive Number:</span>
+                                <span class="detail-value">${trip.driveNumber}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Vehicle:</span>
+                                <span class="detail-value">${trip.vehicle}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Trip Type:</span>
+                                <span class="detail-value">${trip.tripType}</span>
+                            </div>
+                        </div>
+                        
+                        <button class="continue-btn" onclick="continueTrip(${trip.id})">▶️ Continue Trip</button>
+                        <button class="delete-btn" onclick="deleteTrip(${trip.id})">Delete</button>
+                    </div>
+                `;
+            });
+            
+            // Show completed trips
+            completedTrips.forEach(trip => {
+                const problemDays = trip.dailyHours
+                    .map((hours, idx) => hours > 8 ? `Day ${idx + 1}: ${hours.toFixed(1)} hrs` : null)
+                    .filter(d => d !== null);
+                
+                const date = new Date(trip.startDate);
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                
+                // Build daily breakdown
+                let dailyBreakdown = '<div class="daily-breakdown">';
+                trip.days.forEach((day, idx) => {
+                    const status = day.hours > 8 ? '⚠️' : '✓';
+                    dailyBreakdown += `
+                        <div class="daily-breakdown-row">
+                            <span>Day ${idx + 1}: ${day.startTime || '?'} ${day.startPeriod || ''} - ${day.endTime || '?'} ${day.endPeriod || ''}</span>
+                            <span>${status} ${day.hours.toFixed(1)} hrs | ${day.miles} mi</span>
+                        </div>
+                    `;
+                });
+                dailyBreakdown += '</div>';
+                
+                html += `
+                    <div class="trip-card">
+                        <div class="trip-header">
+                            <div>
+                                <div class="trip-title">${trip.destination}</div>
+                                <div class="trip-date">${formattedDate}</div>
+                            </div>
+                            <span class="status-badge completed">✓ Completed</span>
+                        </div>
+                        
+                        <div class="trip-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Drive Number:</span>
+                                <span class="detail-value">${trip.driveNumber}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Vehicle:</span>
+                                <span class="detail-value">${trip.vehicle}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Trip Type:</span>
+                                <span class="detail-value">${trip.tripType}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Total Miles:</span>
+                                <span class="detail-value">${trip.miles}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Total Hours:</span>
+                                <span class="detail-value"><strong>${trip.totalHours.toFixed(1)} hours</strong></span>
+                            </div>
+                            ${dailyBreakdown}
+                            ${problemDays.length > 0 ? `
+                            <div class="detail-row">
+                                <span class="detail-label">⚠️ Problem Days:</span>
+                                <span class="detail-value problem-day">${problemDays.join(', ')}</span>
+                            </div>
+                            ` : ''}
+                            <div class="detail-row">
+                                <span class="detail-label">Tips:</span>
+                                <span class="detail-value">$${trip.tips.toFixed(2)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Meal Expenses:</span>
+                                <span class="detail-value">$${trip.meals.toFixed(2)}</span>
+                            </div>
+                            ${trip.weather ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Weather/Traffic:</span>
+                                <span class="detail-value">${trip.weather}</span>
+                            </div>
+                            ` : ''}
+                            ${trip.maintenance ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Maintenance:</span>
+                                <span class="detail-value">${trip.maintenance}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <button class="delete-btn" onclick="deleteTrip(${trip.id})">Delete Trip</button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // Show export button if there are completed trips
+            if (completedTrips.length > 0) {
+                document.getElementById('exportBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('exportBtn').classList.add('hidden');
+            }
+        }
+        
+        function exportTrips() {
+            const completedTrips = trips.filter(t => t.status === 'completed');
+            
+            if (completedTrips.length === 0) {
+                alert('No completed trips to export!');
+                return;
+            }
+            
+            // Convert trips to format compatible with Python tracker
+            const exportData = {
+                trips: completedTrips.map(trip => ({
+                    drive_number: trip.driveNumber,
+                    destination: trip.destination,
+                    miles: trip.miles,
+                    vehicle: trip.vehicle,
+                    trip_type: trip.tripType,
+                    num_days: trip.numDays,
+                    start_date: formatDateForPython(trip.startDate),
+                    daily_hours: trip.dailyHours,
+                    daily_miles: trip.dailyMiles,
+                    total_hours: trip.totalHours,
+                    tips: trip.tips,
+                    meal_expenses: trip.meals,
+                    weather: trip.weather || null,
+                    maintenance: trip.maintenance || null,
+                    days: trip.days,
+                    added_timestamp: trip.savedAt
+                })),
+                exported_at: new Date().toISOString(),
+                source: 'web_form'
+            };
+            
+            // Create downloadable file
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            // Create download link and trigger it
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `bus_trips_export_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert(`✅ ${completedTrips.length} trip(s) exported!\n\nSave this file to OneDrive, then import it in your Python tracker.`);
+        }
+        
+        function formatDateForPython(dateStr) {
+            // Convert YYYY-MM-DD to MM/DD/YY format for Python tracker
+            const date = new Date(dateStr);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            return `${month}/${day}/${year}`;
+        }
+        
+        // Initialize on load
+        displayTrips();
+    </script>
+</body>
+</html>
