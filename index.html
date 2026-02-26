@@ -212,21 +212,37 @@
         .hours-grid {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
         }
         .hours-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
+            flex-wrap: wrap;
         }
         .hours-row .day-label {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.8rem;
             color: var(--text-dim);
-            min-width: 50px;
+            min-width: 44px;
         }
-        .hours-row input {
+        .hours-row input[type="time"] {
             flex: 1;
+            min-width: 0;
+        }
+        .hours-row .time-arrow {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .hours-row .calc-hours {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--accent);
+            min-width: 42px;
+            text-align: right;
+            flex-shrink: 0;
         }
         .hours-row .remove-day {
             width: 38px;
@@ -414,7 +430,7 @@
             </div>
             <div class="field">
                 <label>Vehicle</label>
-                <input type="text" id="vehicle" placeholder="841">
+                <input type="text" id="vehicle" inputmode="numeric" placeholder="841">
             </div>
         </div>
         <div class="field">
@@ -438,8 +454,8 @@
         </div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
-                <label>Total Miles</label>
-                <input type="number" id="miles" inputmode="decimal" placeholder="0" step="0.1">
+                <label>Begin Miles</label>
+                <input type="number" id="beginMiles" inputmode="decimal" placeholder="0" step="0.1" oninput="updateMiles()">
             </div>
             <div class="field">
                 <label>Relay?</label>
@@ -457,7 +473,10 @@
         <div class="hours-grid" id="hoursGrid">
             <div class="hours-row" data-day="1">
                 <span class="day-label">Day 1</span>
-                <input type="number" inputmode="decimal" step="0.5" placeholder="8.0" class="day-hours" oninput="recalc()">
+                <input type="time" class="day-start" value="07:00" oninput="recalc()">
+                <span class="time-arrow">→</span>
+                <input type="time" class="day-end" value="15:00" oninput="recalc()">
+                <span class="calc-hours">8.0h</span>
             </div>
         </div>
         <button type="button" class="add-day-btn" onclick="addDay()">+ Add Day</button>
@@ -540,6 +559,20 @@
         <div class="problem-alert" id="problemAlert"></div>
     </div>
 
+    <!-- End Miles -->
+    <div class="section">
+        <div class="field-row">
+            <div class="field">
+                <label>End Miles</label>
+                <input type="number" id="endMiles" inputmode="decimal" placeholder="0" step="0.1" oninput="updateMiles()">
+            </div>
+            <div class="field" style="display:flex; flex-direction:column; justify-content:flex-end;">
+                <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Total Miles</span>
+                <span id="totalMilesDisplay" style="font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-top: 4px;">0</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Export -->
     <button class="export-btn charter-style" id="exportBtn" onclick="exportTrip()">
         Export Trip
@@ -603,7 +636,10 @@
         row.dataset.day = dayCount;
         row.innerHTML = `
             <span class="day-label">Day ${dayCount}</span>
-            <input type="number" inputmode="decimal" step="0.5" placeholder="8.0" class="day-hours" oninput="recalc()">
+            <input type="time" class="day-start" value="07:00" oninput="recalc()">
+            <span class="time-arrow">→</span>
+            <input type="time" class="day-end" value="15:00" oninput="recalc()">
+            <span class="calc-hours">8.0h</span>
             <button type="button" class="remove-day" onclick="removeDay(this)">×</button>
         `;
         grid.appendChild(row);
@@ -623,9 +659,31 @@
     }
 
     // ── Get Daily Hours ──
+    function updateMiles() {
+        const begin = parseFloat(document.getElementById('beginMiles').value) || 0;
+        const end = parseFloat(document.getElementById('endMiles').value) || 0;
+        const total = end > begin ? Math.round((end - begin) * 10) / 10 : 0;
+        document.getElementById('totalMilesDisplay').textContent = total > 0 ? total : '0';
+    }
+
+    function calcHoursFromTimes(startStr, endStr) {
+        if (!startStr || !endStr) return 0;
+        const [sh, sm] = startStr.split(':').map(Number);
+        const [eh, em] = endStr.split(':').map(Number);
+        let startMin = sh * 60 + sm;
+        let endMin = eh * 60 + em;
+        // Handle overnight (end < start means past midnight)
+        if (endMin <= startMin) endMin += 24 * 60;
+        return Math.round((endMin - startMin) / 60 * 10) / 10;
+    }
+
     function getDailyHours() {
-        const inputs = document.querySelectorAll('.day-hours');
-        return Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+        const rows = document.querySelectorAll('.hours-row');
+        return Array.from(rows).map(row => {
+            const start = row.querySelector('.day-start')?.value || '';
+            const end = row.querySelector('.day-end')?.value || '';
+            return calcHoursFromTimes(start, end);
+        });
     }
 
     // ── Live Recalculation ──
@@ -633,6 +691,14 @@
         const dailyHours = getDailyHours();
         const numDays = dailyHours.length;
         const totalHours = dailyHours.reduce((a, b) => a + b, 0);
+
+        // Update each row's calculated hours display
+        const rows = document.querySelectorAll('.hours-row');
+        rows.forEach((row, i) => {
+            const display = row.querySelector('.calc-hours');
+            if (display) display.textContent = dailyHours[i].toFixed(1) + 'h';
+        });
+
         const meals = parseFloat(document.getElementById('mealExpenses').value) || 0;
 
         const basePay = 200.00 * numDays;
@@ -700,7 +766,9 @@
 
         const meals = parseFloat(document.getElementById('mealExpenses').value) || 0;
         const tips = parseFloat(document.getElementById('tips').value) || 0;
-        const miles = parseFloat(document.getElementById('miles').value) || 0;
+        const beginMiles = parseFloat(document.getElementById('beginMiles').value) || 0;
+        const endMiles = parseFloat(document.getElementById('endMiles').value) || 0;
+        const miles = endMiles > beginMiles ? Math.round((endMiles - beginMiles) * 10) / 10 : 0;
 
         const basePay = 200.00 * numDays;
         let overtimePay = 0;
@@ -799,7 +867,9 @@
         document.getElementById('vehicle').value = '';
         document.getElementById('destination').value = '';
         document.getElementById('tripType').value = 'Day Trip';
-        document.getElementById('miles').value = '';
+        document.getElementById('beginMiles').value = '';
+        document.getElementById('endMiles').value = '';
+        document.getElementById('totalMilesDisplay').textContent = '0';
         document.getElementById('isRelay').value = 'false';
         document.getElementById('tips').value = '0';
         document.getElementById('mealExpenses').value = '0';
@@ -812,7 +882,10 @@
         grid.innerHTML = `
             <div class="hours-row" data-day="1">
                 <span class="day-label">Day 1</span>
-                <input type="number" inputmode="decimal" step="0.5" placeholder="8.0" class="day-hours" oninput="recalc()">
+                <input type="time" class="day-start" value="07:00" oninput="recalc()">
+                <span class="time-arrow">→</span>
+                <input type="time" class="day-end" value="15:00" oninput="recalc()">
+                <span class="calc-hours">8.0h</span>
             </div>
         `;
 
