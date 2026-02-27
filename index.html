@@ -393,6 +393,92 @@
         }
         .reset-link:active { color: var(--danger); }
 
+        /* ── Save & Export Buttons ── */
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 0;
+        }
+        .save-btn {
+            width: 100%;
+            padding: 18px;
+            border: 2px solid var(--accent);
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+        .save-btn:active { transform: scale(0.98); }
+
+        /* ── Queue Badge ── */
+        .queue-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 14px;
+            display: none;
+        }
+        .queue-section.visible { display: block; }
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .queue-header .queue-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+        }
+        .queue-badge {
+            background: var(--accent);
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+        .queue-item:last-child { border-bottom: none; }
+        .queue-item .qi-info { color: var(--text); }
+        .queue-item .qi-detail { color: var(--text-dim); font-size: 0.75rem; }
+        .queue-item .qi-remove {
+            color: var(--danger);
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .queue-clear {
+            margin-top: 8px;
+            width: 100%;
+            padding: 8px;
+            background: none;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 8px;
+            color: var(--danger);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
         /* ── Responsive spacing for safe area ── */
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
@@ -573,10 +659,25 @@
         </div>
     </div>
 
-    <!-- Export -->
-    <button class="export-btn charter-style" id="exportBtn" onclick="exportTrip()">
-        Export Trip
-    </button>
+    <!-- Saved Trips Queue -->
+    <div class="queue-section" id="queueSection">
+        <div class="queue-header">
+            <span class="queue-title">Saved Trips</span>
+            <span class="queue-badge" id="queueBadge">0</span>
+        </div>
+        <div id="queueList"></div>
+        <button type="button" class="queue-clear" onclick="clearQueue()">Clear All</button>
+    </div>
+
+    <!-- Save & Export -->
+    <div class="btn-row">
+        <button class="save-btn" id="saveBtn" onclick="saveTrip()">
+            Save Trip
+        </button>
+        <button class="export-btn charter-style" id="exportBtn" onclick="exportAll()">
+            Export
+        </button>
+    </div>
 
     <a href="#" class="reset-link" onclick="resetForm(); return false;">Reset Form</a>
 
@@ -587,14 +688,104 @@
 <script>
     // ── State ──
     let currentDivision = 'charter';
+    let tripQueue = [];
+
+    // ── Auto-Save Keys ──
+    const AUTOSAVE_KEY = 'tripTracker_autosave';
+    const QUEUE_KEY = 'tripTracker_queue';
 
     // ── Init ──
     document.addEventListener('DOMContentLoaded', () => {
-        // Set today's date
-        const today = new Date();
-        document.getElementById('startDate').value = today.toISOString().split('T')[0];
+        // Load queue from storage
+        try {
+            const saved = localStorage.getItem(QUEUE_KEY);
+            if (saved) tripQueue = JSON.parse(saved);
+        } catch(e) {}
+        renderQueue();
+
+        // Restore auto-saved form data
+        try {
+            const auto = localStorage.getItem(AUTOSAVE_KEY);
+            if (auto) {
+                const s = JSON.parse(auto);
+                if (s.driveNumber) document.getElementById('driveNumber').value = s.driveNumber;
+                if (s.vehicle) document.getElementById('vehicle').value = s.vehicle;
+                if (s.destination) document.getElementById('destination').value = s.destination;
+                if (s.tripType) document.getElementById('tripType').value = s.tripType;
+                if (s.startDate) document.getElementById('startDate').value = s.startDate;
+                if (s.beginMiles) document.getElementById('beginMiles').value = s.beginMiles;
+                if (s.endMiles) document.getElementById('endMiles').value = s.endMiles;
+                if (s.isRelay) document.getElementById('isRelay').value = s.isRelay;
+                if (s.tips !== undefined) document.getElementById('tips').value = s.tips;
+                if (s.mealExpenses !== undefined) document.getElementById('mealExpenses').value = s.mealExpenses;
+                if (s.weather) document.getElementById('weather').value = s.weather;
+                if (s.maintenance) document.getElementById('maintenance').value = s.maintenance;
+                if (s.tourBonusPerDay) document.getElementById('tourBonusPerDay').value = s.tourBonusPerDay;
+                if (s.division) { currentDivision = s.division; setDivision(s.division); }
+                // Restore hours grid
+                if (s.days && s.days.length > 0) {
+                    const grid = document.getElementById('hoursGrid');
+                    grid.innerHTML = '';
+                    s.days.forEach((day, i) => {
+                        const row = document.createElement('div');
+                        row.className = 'hours-row';
+                        row.dataset.day = i + 1;
+                        const removeBtn = i > 0 ? `<button type="button" class="remove-day" onclick="removeDay(this)">×</button>` : '';
+                        row.innerHTML = `
+                            <span class="day-label">Day ${i + 1}</span>
+                            <input type="time" class="day-start" value="${day.start || ''}" oninput="recalc()">
+                            <span class="time-arrow">→</span>
+                            <input type="time" class="day-end" value="${day.end || ''}" oninput="recalc()">
+                            <span class="calc-hours"></span>
+                            ${removeBtn}
+                        `;
+                        grid.appendChild(row);
+                    });
+                }
+                updateMiles();
+                recalc();
+                return; // Skip default date set
+            }
+        } catch(e) {}
+
+        // Default: set today's date
+        document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
         recalc();
     });
+
+    // ── Auto-Save (called on every change) ──
+    function autoSave() {
+        try {
+            const rows = document.querySelectorAll('.hours-row');
+            const days = Array.from(rows).map(row => ({
+                start: row.querySelector('.day-start')?.value || '',
+                end: row.querySelector('.day-end')?.value || ''
+            }));
+
+            const state = {
+                division: currentDivision,
+                driveNumber: document.getElementById('driveNumber').value,
+                vehicle: document.getElementById('vehicle').value,
+                destination: document.getElementById('destination').value,
+                tripType: document.getElementById('tripType').value,
+                startDate: document.getElementById('startDate').value,
+                beginMiles: document.getElementById('beginMiles').value,
+                endMiles: document.getElementById('endMiles').value,
+                isRelay: document.getElementById('isRelay').value,
+                tips: document.getElementById('tips').value,
+                mealExpenses: document.getElementById('mealExpenses').value,
+                weather: document.getElementById('weather').value,
+                maintenance: document.getElementById('maintenance').value,
+                tourBonusPerDay: document.getElementById('tourBonusPerDay').value,
+                days: days
+            };
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+        } catch(e) {}
+    }
+
+    // Attach auto-save to all inputs
+    document.addEventListener('input', autoSave);
+    document.addEventListener('change', autoSave);
 
     // ── Division Toggle ──
     function setDivision(div) {
@@ -624,6 +815,7 @@
             otRow.style.display = 'flex';
             tbRow.style.display = 'none';
         }
+        autoSave();
         recalc();
     }
 
@@ -649,7 +841,6 @@
     function removeDay(btn) {
         const row = btn.parentElement;
         row.remove();
-        // Re-label days
         const rows = document.querySelectorAll('.hours-row');
         rows.forEach((r, i) => {
             r.dataset.day = i + 1;
@@ -658,7 +849,7 @@
         recalc();
     }
 
-    // ── Get Daily Hours ──
+    // ── Miles ──
     function updateMiles() {
         const begin = parseFloat(document.getElementById('beginMiles').value) || 0;
         const end = parseFloat(document.getElementById('endMiles').value) || 0;
@@ -672,7 +863,6 @@
         const [eh, em] = endStr.split(':').map(Number);
         let startMin = sh * 60 + sm;
         let endMin = eh * 60 + em;
-        // Handle overnight (end < start means past midnight)
         if (endMin <= startMin) endMin += 24 * 60;
         return Math.round((endMin - startMin) / 60 * 10) / 10;
     }
@@ -692,15 +882,13 @@
         const numDays = dailyHours.length;
         const totalHours = dailyHours.reduce((a, b) => a + b, 0);
 
-        // Update each row's calculated hours display
         const rows = document.querySelectorAll('.hours-row');
         rows.forEach((row, i) => {
             const display = row.querySelector('.calc-hours');
-            if (display) display.textContent = dailyHours[i].toFixed(1) + 'h';
+            if (display) display.textContent = dailyHours[i] > 0 ? dailyHours[i].toFixed(1) + 'h' : '';
         });
 
         const meals = parseFloat(document.getElementById('mealExpenses').value) || 0;
-
         const basePay = 200.00 * numDays;
         let overtimePay = 0;
         let tourBonus = 0;
@@ -718,7 +906,6 @@
         const netEarnings = totalPay - meals;
         const hourlyRate = totalHours > 0 ? netEarnings / totalHours : 0;
 
-        // Update preview
         document.getElementById('pvBase').textContent = '$' + basePay.toFixed(2);
         document.getElementById('pvOvertime').textContent = '$' + overtimePay.toFixed(2);
         document.getElementById('pvTourBonus').textContent = '$' + tourBonus.toFixed(2);
@@ -729,7 +916,6 @@
         rateEl.textContent = '$' + hourlyRate.toFixed(2);
         rateEl.className = 'pay-value ' + (hourlyRate >= 25 ? 'good' : (hourlyRate >= 20 ? 'warn' : 'bad'));
 
-        // Problem days alert
         const problemDays = dailyHours
             .map((h, i) => ({ day: i + 1, hours: h }))
             .filter(d => d.hours > 8);
@@ -747,22 +933,15 @@
         }
     }
 
-    // ── Export Trip as JSON ──
-    function exportTrip() {
+    // ── Build Trip Object ──
+    function buildTripObject() {
         const dest = document.getElementById('destination').value.trim();
-        if (!dest) {
-            showToast('⚠️ Enter a destination');
-            return;
-        }
+        if (!dest) { showToast('⚠️ Enter a destination'); return null; }
 
         const dailyHours = getDailyHours();
         const numDays = dailyHours.length;
         const totalHours = dailyHours.reduce((a, b) => a + b, 0);
-
-        if (totalHours <= 0) {
-            showToast('⚠️ Enter hours worked');
-            return;
-        }
+        if (totalHours <= 0) { showToast('⚠️ Enter hours worked'); return null; }
 
         const meals = parseFloat(document.getElementById('mealExpenses').value) || 0;
         const tips = parseFloat(document.getElementById('tips').value) || 0;
@@ -776,8 +955,7 @@
         let tourBonusPerDay = 0;
 
         if (currentDivision === 'charter') {
-            const otDays = dailyHours.filter(h => h > 12).length;
-            overtimePay = otDays * 75.00;
+            overtimePay = dailyHours.filter(h => h > 12).length * 75.00;
         } else {
             tourBonusPerDay = parseFloat(document.getElementById('tourBonusPerDay').value) || 150;
             tourBonus = tourBonusPerDay * numDays;
@@ -786,36 +964,24 @@
         const totalPay = basePay + overtimePay + tourBonus;
         const netEarnings = totalPay - meals;
 
-        // Identify problem and good days
         const problemDays = [];
         const goodDays = [];
         dailyHours.forEach((h, i) => {
             if (h > 8) {
-                problemDays.push([i + 1, h]); // [day_num, hours] - matches Python tracker format
+                problemDays.push([i + 1, h]);
             } else if (h > 0) {
-                goodDays.push({
-                    day: i + 1,
-                    hours: h,
-                    hourly_rate: totalHours > 0 ? Math.round((totalPay / totalHours) * 100) / 100 : 0
-                });
+                goodDays.push({ day: i + 1, hours: h, hourly_rate: totalHours > 0 ? Math.round((totalPay / totalHours) * 100) / 100 : 0 });
             }
         });
 
-        // Format date as MM/DD/YY
         const dateVal = document.getElementById('startDate').value;
         let formattedDate = '';
         if (dateVal) {
             const d = new Date(dateVal + 'T12:00:00');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const yy = String(d.getFullYear()).slice(-2);
-            formattedDate = `${mm}/${dd}/${yy}`;
+            formattedDate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
         }
 
-        const weather = document.getElementById('weather').value.trim() || null;
-        const maintenance = document.getElementById('maintenance').value.trim() || null;
-
-        const trip = {
+        return {
             drive_number: document.getElementById('driveNumber').value.trim(),
             division: currentDivision,
             destination: dest,
@@ -835,20 +1001,52 @@
             tips: tips,
             meal_expenses: meals,
             net_earnings: netEarnings,
-            weather: weather,
-            maintenance: maintenance,
+            weather: document.getElementById('weather').value.trim() || null,
+            maintenance: document.getElementById('maintenance').value.trim() || null,
             added_timestamp: new Date().toISOString(),
             problem_days: problemDays,
             good_days: goodDays
         };
+    }
 
-        // Generate filename
-        const safeDest = dest.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-        const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-        const filename = `trip_${safeDest}_${ts}.json`;
+    // ── Save Trip to Queue ──
+    function saveTrip() {
+        const trip = buildTripObject();
+        if (!trip) return;
 
-        // Create and download file
-        const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' });
+        tripQueue.push(trip);
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
+        renderQueue();
+        showToast(`✅ Saved! (${tripQueue.length} trip${tripQueue.length > 1 ? 's' : ''} queued)`);
+        resetForm(true); // silent reset
+    }
+
+    // ── Export All (queue + current if filled) ──
+    function exportAll() {
+        // Check if current form has data to include
+        const currentTrip = buildTripObject();
+        const allTrips = [...tripQueue];
+        if (currentTrip) allTrips.push(currentTrip);
+
+        if (allTrips.length === 0) {
+            showToast('⚠️ No trips to export');
+            return;
+        }
+
+        // Single trip = single object, multiple = wrapped in {trips: [...]}
+        let data, filename;
+        if (allTrips.length === 1) {
+            data = JSON.stringify(allTrips[0], null, 2);
+            const safeDest = allTrips[0].destination.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+            const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            filename = `trip_${safeDest}_${ts}.json`;
+        } else {
+            data = JSON.stringify({ trips: allTrips }, null, 2);
+            const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            filename = `trips_${allTrips.length}_${ts}.json`;
+        }
+
+        const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -858,11 +1056,54 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast('✅ Trip exported!');
+        // Clear queue after export
+        tripQueue = [];
+        try { localStorage.removeItem(QUEUE_KEY); } catch(e) {}
+        renderQueue();
+        resetForm(true);
+        showToast(`✅ ${allTrips.length} trip${allTrips.length > 1 ? 's' : ''} exported!`);
+    }
+
+    // ── Queue Display ──
+    function renderQueue() {
+        const section = document.getElementById('queueSection');
+        const list = document.getElementById('queueList');
+        const badge = document.getElementById('queueBadge');
+
+        if (tripQueue.length === 0) {
+            section.classList.remove('visible');
+            return;
+        }
+
+        section.classList.add('visible');
+        badge.textContent = tripQueue.length;
+        list.innerHTML = tripQueue.map((t, i) => `
+            <div class="queue-item">
+                <div>
+                    <div class="qi-info">${t.destination}</div>
+                    <div class="qi-detail">${t.start_date} · ${t.total_hours}h · $${t.net_earnings.toFixed(0)}</div>
+                </div>
+                <button class="qi-remove" onclick="removeFromQueue(${i})">×</button>
+            </div>
+        `).join('');
+    }
+
+    function removeFromQueue(idx) {
+        tripQueue.splice(idx, 1);
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
+        renderQueue();
+        showToast('Trip removed from queue');
+    }
+
+    function clearQueue() {
+        tripQueue = [];
+        try { localStorage.removeItem(QUEUE_KEY); } catch(e) {}
+        renderQueue();
+        showToast('Queue cleared');
     }
 
     // ── Reset ──
-    function resetForm() {
+    function resetForm(silent) {
         document.getElementById('driveNumber').value = '';
         document.getElementById('vehicle').value = '';
         document.getElementById('destination').value = '';
@@ -877,7 +1118,6 @@
         document.getElementById('maintenance').value = '';
         document.getElementById('tourBonusPerDay').value = '150';
 
-        // Reset to single day
         const grid = document.getElementById('hoursGrid');
         grid.innerHTML = `
             <div class="hours-row" data-day="1">
@@ -889,12 +1129,14 @@
             </div>
         `;
 
-        // Reset date to today
         document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
-
         setDivision('charter');
         recalc();
-        showToast('Form reset');
+
+        // Clear auto-save
+        try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e) {}
+
+        if (!silent) showToast('Form reset');
     }
 
     // ── Toast ──
