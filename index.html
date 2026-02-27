@@ -458,6 +458,19 @@
         .queue-item:last-child { border-bottom: none; }
         .queue-item .qi-info { color: var(--text); }
         .queue-item .qi-detail { color: var(--text-dim); font-size: 0.75rem; }
+        .queue-item .qi-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .queue-item .qi-edit {
+            color: var(--accent);
+            background: none;
+            border: none;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
         .queue-item .qi-remove {
             color: var(--danger);
             background: none;
@@ -981,17 +994,28 @@
             formattedDate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
         }
 
+        // Capture start/end times for edit restore
+        const dailyTimes = Array.from(document.querySelectorAll('.hours-row')).map(row => ({
+            start: row.querySelector('.day-start')?.value || '',
+            end: row.querySelector('.day-end')?.value || ''
+        }));
+        const rawDate = document.getElementById('startDate').value;
+
         return {
             drive_number: document.getElementById('driveNumber').value.trim(),
             division: currentDivision,
             destination: dest,
             miles: miles,
+            begin_miles: beginMiles,
+            end_miles: endMiles,
             vehicle: document.getElementById('vehicle').value.trim(),
             is_relay: document.getElementById('isRelay').value === 'true',
             trip_type: document.getElementById('tripType').value,
             num_days: numDays,
             start_date: formattedDate,
+            raw_date: rawDate,
             daily_hours: dailyHours,
+            daily_times: dailyTimes,
             total_hours: totalHours,
             base_pay: basePay,
             overtime_pay: overtimePay,
@@ -1083,7 +1107,10 @@
                     <div class="qi-info">${t.destination}</div>
                     <div class="qi-detail">${t.start_date} · ${t.total_hours}h · $${t.net_earnings.toFixed(0)}</div>
                 </div>
-                <button class="qi-remove" onclick="removeFromQueue(${i})">×</button>
+                <div class="qi-actions">
+                    <button class="qi-edit" onclick="editFromQueue(${i})">✏️</button>
+                    <button class="qi-remove" onclick="removeFromQueue(${i})">×</button>
+                </div>
             </div>
         `).join('');
     }
@@ -1093,6 +1120,75 @@
         try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
         renderQueue();
         showToast('Trip removed from queue');
+    }
+
+    function editFromQueue(idx) {
+        const trip = tripQueue[idx];
+
+        // Remove from queue
+        tripQueue.splice(idx, 1);
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
+        renderQueue();
+
+        // Load into form
+        document.getElementById('driveNumber').value = trip.drive_number || '';
+        document.getElementById('vehicle').value = trip.vehicle || '';
+        document.getElementById('destination').value = trip.destination || '';
+        document.getElementById('tripType').value = trip.trip_type || 'Day Trip';
+        document.getElementById('isRelay').value = trip.is_relay ? 'true' : 'false';
+        document.getElementById('tips').value = trip.tips || 0;
+        document.getElementById('mealExpenses').value = trip.meal_expenses || 0;
+        document.getElementById('weather').value = trip.weather || '';
+        document.getElementById('maintenance').value = trip.maintenance || '';
+        document.getElementById('tourBonusPerDay').value = trip.tour_bonus_per_day || 150;
+
+        // Restore miles
+        document.getElementById('beginMiles').value = trip.begin_miles || '';
+        document.getElementById('endMiles').value = trip.end_miles || '';
+        updateMiles();
+
+        // Restore date
+        if (trip.raw_date) {
+            document.getElementById('startDate').value = trip.raw_date;
+        } else if (trip.start_date) {
+            // Convert MM/DD/YY back to YYYY-MM-DD
+            const parts = trip.start_date.split('/');
+            if (parts.length === 3) {
+                const yr = parseInt(parts[2]) + 2000;
+                document.getElementById('startDate').value = `${yr}-${parts[0]}-${parts[1]}`;
+            }
+        }
+
+        // Restore hours grid
+        const grid = document.getElementById('hoursGrid');
+        const times = trip.daily_times || [];
+        const numDays = Math.max(trip.num_days || 1, times.length, (trip.daily_hours || []).length);
+
+        grid.innerHTML = '';
+        for (let i = 0; i < numDays; i++) {
+            const row = document.createElement('div');
+            row.className = 'hours-row';
+            row.dataset.day = i + 1;
+            const startVal = times[i]?.start || '07:00';
+            const endVal = times[i]?.end || '15:00';
+            const removeBtn = i > 0 ? `<button type="button" class="remove-day" onclick="removeDay(this)">×</button>` : '';
+            row.innerHTML = `
+                <span class="day-label">Day ${i + 1}</span>
+                <input type="time" class="day-start" value="${startVal}" oninput="recalc()">
+                <span class="time-arrow">→</span>
+                <input type="time" class="day-end" value="${endVal}" oninput="recalc()">
+                <span class="calc-hours"></span>
+                ${removeBtn}
+            `;
+            grid.appendChild(row);
+        }
+
+        // Set division (triggers recalc)
+        setDivision(trip.division || 'charter');
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('✏️ Editing trip — make changes and save again');
     }
 
     function clearQueue() {
