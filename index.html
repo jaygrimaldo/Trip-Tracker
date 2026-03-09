@@ -533,8 +533,8 @@
             </div>
         </div>
         <div class="field">
-            <label>Destination</label>
-            <input type="text" id="destination" placeholder="Roper Mt. Science Center">
+            <label>Client</label>
+            <input type="text" id="client" placeholder="Roper Mt. Science Center">
         </div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
@@ -723,7 +723,8 @@
                 const s = JSON.parse(auto);
                 if (s.driveNumber) document.getElementById('driveNumber').value = s.driveNumber;
                 if (s.vehicle) document.getElementById('vehicle').value = s.vehicle;
-                if (s.destination) document.getElementById('destination').value = s.destination;
+                if (s.destination) document.getElementById('client').value = s.destination; // legacy compat
+                if (s.client) document.getElementById('client').value = s.client;
                 if (s.tripType) document.getElementById('tripType').value = s.tripType;
                 if (s.startDate) document.getElementById('startDate').value = s.startDate;
                 if (s.beginMiles) document.getElementById('beginMiles').value = s.beginMiles;
@@ -779,7 +780,7 @@
                 division: currentDivision,
                 driveNumber: document.getElementById('driveNumber').value,
                 vehicle: document.getElementById('vehicle').value,
-                destination: document.getElementById('destination').value,
+                client: document.getElementById('client').value,
                 tripType: document.getElementById('tripType').value,
                 startDate: document.getElementById('startDate').value,
                 beginMiles: document.getElementById('beginMiles').value,
@@ -948,8 +949,8 @@
 
     // ── Build Trip Object ──
     function buildTripObject() {
-        const dest = document.getElementById('destination').value.trim();
-        if (!dest) { showToast('⚠️ Enter a destination'); return null; }
+        const dest = document.getElementById('client').value.trim();
+        if (!dest) { showToast('⚠️ Enter a client'); return null; }
 
         const dailyHours = getDailyHours();
         const numDays = dailyHours.length;
@@ -1004,7 +1005,7 @@
         return {
             drive_number: document.getElementById('driveNumber').value.trim(),
             division: currentDivision,
-            destination: dest,
+            client: dest,
             miles: miles,
             begin_miles: beginMiles,
             end_miles: endMiles,
@@ -1061,7 +1062,7 @@
         let data, filename;
         if (allTrips.length === 1) {
             data = JSON.stringify(allTrips[0], null, 2);
-            const safeDest = allTrips[0].destination.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+            const safeDest = (allTrips[0].client || allTrips[0].destination || 'trip').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
             const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
             filename = `trip_${safeDest}_${ts}.json`;
         } else {
@@ -1104,7 +1105,7 @@
         list.innerHTML = tripQueue.map((t, i) => `
             <div class="queue-item">
                 <div>
-                    <div class="qi-info">${t.destination}</div>
+                    <div class="qi-info">${t.client || t.destination}</div>
                     <div class="qi-detail">${t.start_date} · ${t.total_hours}h · $${t.net_earnings.toFixed(0)}</div>
                 </div>
                 <div class="qi-actions">
@@ -1133,7 +1134,7 @@
         // Load into form
         document.getElementById('driveNumber').value = trip.drive_number || '';
         document.getElementById('vehicle').value = trip.vehicle || '';
-        document.getElementById('destination').value = trip.destination || '';
+        document.getElementById('client').value = trip.client || trip.destination || '';
         document.getElementById('tripType').value = trip.trip_type || 'Day Trip';
         document.getElementById('isRelay').value = trip.is_relay ? 'true' : 'false';
         document.getElementById('tips').value = trip.tips || 0;
@@ -1202,7 +1203,7 @@
     function resetForm(silent) {
         document.getElementById('driveNumber').value = '';
         document.getElementById('vehicle').value = '';
-        document.getElementById('destination').value = '';
+        document.getElementById('client').value = '';
         document.getElementById('tripType').value = 'Day Trip';
         document.getElementById('beginMiles').value = '';
         document.getElementById('endMiles').value = '';
