@@ -10,22 +10,37 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --surface-2: #232734;
-            --border: #2e3345;
-            --text: #e4e6ef;
-            --text-dim: #8b90a5;
+            --bg: #ffff00;
+            --surface: #fef08a;
+            --surface-2: #fde047;
+            --border: #ca8a04;
+            --text: #1a1a1a;
+            --text-dim: #78350f;
+            --charter-blue: #1d4ed8;
+            --charter-glow: rgba(29, 78, 216, 0.15);
+            --tour-green: #15803d;
+            --tour-glow: rgba(21, 128, 61, 0.15);
+            --accent: var(--charter-blue);
+            --accent-glow: var(--charter-glow);
+            --danger: #dc2626;
+            --warning: #d97706;
+            --radius: 14px;
+            --radius-sm: 10px;
+        }
+
+        body.night-mode {
+            --bg: #1a2e1a;
+            --surface: #213d21;
+            --surface-2: #2a4d2a;
+            --border: #3a6b3a;
+            --text: #e0f2e0;
+            --text-dim: #6aaa6a;
             --charter-blue: #5b7cf7;
             --charter-glow: rgba(91, 124, 247, 0.15);
             --tour-green: #34d399;
             --tour-glow: rgba(52, 211, 153, 0.15);
-            --accent: var(--charter-blue);
-            --accent-glow: var(--charter-glow);
             --danger: #f87171;
             --warning: #fbbf24;
-            --radius: 14px;
-            --radius-sm: 10px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -46,7 +61,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(15, 17, 23, 0.85);
+            background: rgba(255, 255, 0, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
@@ -55,7 +70,21 @@
             align-items: center;
             justify-content: space-between;
         }
-        .app-header h1 {
+        body.night-mode .app-header {
+            background: rgba(26, 46, 26, 0.92);
+        }
+
+        .theme-toggle {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 10px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+        }
             font-size: 1.2rem;
             font-weight: 700;
             letter-spacing: -0.02em;
@@ -496,13 +525,50 @@
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
         }
+
+        .ac-wrapper { position: relative; }
+        .ac-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); z-index: 200;
+            max-height: 180px; overflow-y: auto; margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .ac-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .ac-item:last-child { border-bottom: none; }
+        .ac-item:active { background: var(--surface-2); }
+        .ac-name { font-size: 0.95rem; font-weight: 500; color: var(--text); }
+        .ac-detail { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+
+        textarea {
+            width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); padding: 12px 14px;
+            font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+            color: var(--text); resize: none; outline: none; line-height: 1.5;
+        }
+        textarea:focus { border-color: var(--accent); }
+        textarea::placeholder { color: var(--text-dim); }
+
+        .action-btn {
+            width: 100%; margin-top: 10px; padding: 11px 16px;
+            border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem; font-weight: 500; cursor: pointer;
+            border: 1.5px solid var(--border); background: var(--surface);
+            color: var(--text); display: none;
+        }
+        .action-btn.visible { display: block; }
+        .action-btn.text-btn { border-color: #3b82f6; color: #3b82f6; }
+        .action-btn.email-btn { border-color: var(--accent); color: var(--accent); }
     </style>
 </head>
 <body>
 
 <div class="app-header">
     <h1>🚌 Trip Tracker</h1>
-    <span class="version">v2.1</span>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Night</button>
+        <span class="version">v2.1</span>
+    </div>
 </div>
 
 <div class="container">
@@ -528,13 +594,24 @@
                 <input type="text" id="driveNumber" inputmode="numeric" placeholder="19396">
             </div>
             <div class="field">
-                <label>Vehicle</label>
-                <input type="text" id="vehicle" inputmode="numeric" placeholder="841">
+                <label>Bus #</label>
+                <input type="text" id="vehicle" inputmode="numeric" placeholder="848">
             </div>
         </div>
-        <div class="field">
+        <div class="field ac-wrapper">
             <label>Client</label>
-            <input type="text" id="client" placeholder="Roper Mt. Science Center">
+            <input type="text" id="client" placeholder="Core Soccer" oninput="autocompleteClient(this.value)" autocomplete="off">
+            <div class="ac-dropdown" id="clientDropdown"></div>
+        </div>
+        <div class="field ac-wrapper" style="margin-top: 14px;">
+            <label>Pickup Address</label>
+            <input type="text" id="pickupAddress" placeholder="301 North Elm St, High Point NC" oninput="autocompleteAddress('pickup', this.value)" autocomplete="off">
+            <div class="ac-dropdown" id="pickupDropdown"></div>
+        </div>
+        <div class="field ac-wrapper" style="margin-top: 14px;">
+            <label>Dropoff Address</label>
+            <input type="text" id="dropoffAddress" placeholder="106 Jefferson St S, Huntsville AL" oninput="autocompleteAddress('dropoff', this.value)" autocomplete="off">
+            <div class="ac-dropdown" id="dropoffDropdown"></div>
         </div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
@@ -562,6 +639,16 @@
                     <option value="false">No</option>
                     <option value="true">Yes</option>
                 </select>
+            </div>
+        </div>
+        <div class="field-row" style="margin-top: 14px;">
+            <div class="field">
+                <label>Odometer at Dropoff</label>
+                <input type="number" id="odometerDropoff" inputmode="decimal" placeholder="356643">
+            </div>
+            <div class="field">
+                <label>Odometer at Return Pickup</label>
+                <input type="number" id="odometerPickup" inputmode="decimal" placeholder="356660">
             </div>
         </div>
     </div>
@@ -619,12 +706,13 @@
     <div class="section">
         <div class="section-title">Notes <span style="font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span></div>
         <div class="field">
-            <label>Weather / Traffic</label>
-            <input type="text" id="weather" placeholder="20 degrees at pickup time">
+            <label>Group Notes</label>
+            <textarea id="groupNotes" rows="3" placeholder="Notes about this client / group — pre-fills on repeat trips"></textarea>
         </div>
         <div class="field" style="margin-top: 14px;">
             <label>Maintenance</label>
-            <input type="text" id="maintenance" placeholder="Any vehicle issues">
+            <input type="text" id="maintenance" placeholder="Any vehicle issues" oninput="toggleTextBtn()">
+            <button type="button" class="action-btn text-btn" id="maintenanceTextBtn" onclick="textMaintenance()">💬 Text Johnny &amp; Robbie</button>
         </div>
     </div>
 
@@ -692,6 +780,8 @@
         </button>
     </div>
 
+    <button type="button" class="action-btn email-btn visible" style="max-width:500px; margin:0 auto 8px; display:block;" onclick="emailToJoLynn()">📧 Email Forms to JoLynn</button>
+
     <a href="#" class="reset-link" onclick="resetForm(); return false;">Reset Form</a>
 
 </div>
@@ -699,6 +789,21 @@
 <div class="toast" id="toast"></div>
 
 <script>
+    // ── Theme Toggle ──
+    const THEME_KEY = 'tripTracker_theme';
+
+    function toggleTheme() {
+        const isNight = document.body.classList.toggle('night-mode');
+        document.getElementById('themeToggle').textContent = isNight ? '☀️ Day' : '🌙 Night';
+        localStorage.setItem(THEME_KEY, isNight ? 'night' : 'day');
+    }
+
+    // Restore saved theme
+    if (localStorage.getItem(THEME_KEY) === 'night') {
+        document.body.classList.add('night-mode');
+        document.getElementById('themeToggle').textContent = '☀️ Day';
+    }
+
     // ── State ──
     let currentDivision = 'charter';
     let tripQueue = [];
@@ -725,6 +830,10 @@
                 if (s.vehicle) document.getElementById('vehicle').value = s.vehicle;
                 if (s.destination) document.getElementById('client').value = s.destination; // legacy compat
                 if (s.client) document.getElementById('client').value = s.client;
+                if (s.pickupAddress) document.getElementById('pickupAddress').value = s.pickupAddress;
+                if (s.dropoffAddress) document.getElementById('dropoffAddress').value = s.dropoffAddress;
+                if (s.odometerDropoff) document.getElementById('odometerDropoff').value = s.odometerDropoff;
+                if (s.odometerPickup) document.getElementById('odometerPickup').value = s.odometerPickup;
                 if (s.tripType) document.getElementById('tripType').value = s.tripType;
                 if (s.startDate) document.getElementById('startDate').value = s.startDate;
                 if (s.beginMiles) document.getElementById('beginMiles').value = s.beginMiles;
@@ -732,8 +841,8 @@
                 if (s.isRelay) document.getElementById('isRelay').value = s.isRelay;
                 if (s.tips !== undefined) document.getElementById('tips').value = s.tips;
                 if (s.mealExpenses !== undefined) document.getElementById('mealExpenses').value = s.mealExpenses;
-                if (s.weather) document.getElementById('weather').value = s.weather;
-                if (s.maintenance) document.getElementById('maintenance').value = s.maintenance;
+                if (s.groupNotes) document.getElementById('groupNotes').value = s.groupNotes;
+                if (s.maintenance) { document.getElementById('maintenance').value = s.maintenance; toggleTextBtn(); }
                 if (s.tourBonusPerDay) document.getElementById('tourBonusPerDay').value = s.tourBonusPerDay;
                 if (s.division) { currentDivision = s.division; setDivision(s.division); }
                 // Restore hours grid
@@ -781,6 +890,10 @@
                 driveNumber: document.getElementById('driveNumber').value,
                 vehicle: document.getElementById('vehicle').value,
                 client: document.getElementById('client').value,
+                pickupAddress: document.getElementById('pickupAddress').value,
+                dropoffAddress: document.getElementById('dropoffAddress').value,
+                odometerDropoff: document.getElementById('odometerDropoff').value,
+                odometerPickup: document.getElementById('odometerPickup').value,
                 tripType: document.getElementById('tripType').value,
                 startDate: document.getElementById('startDate').value,
                 beginMiles: document.getElementById('beginMiles').value,
@@ -788,7 +901,7 @@
                 isRelay: document.getElementById('isRelay').value,
                 tips: document.getElementById('tips').value,
                 mealExpenses: document.getElementById('mealExpenses').value,
-                weather: document.getElementById('weather').value,
+                groupNotes: document.getElementById('groupNotes').value,
                 maintenance: document.getElementById('maintenance').value,
                 tourBonusPerDay: document.getElementById('tourBonusPerDay').value,
                 days: days
@@ -1006,6 +1119,11 @@
             drive_number: document.getElementById('driveNumber').value.trim(),
             division: currentDivision,
             client: dest,
+            pickup_address: document.getElementById('pickupAddress').value.trim(),
+            dropoff_address: document.getElementById('dropoffAddress').value.trim(),
+            odometer_dropoff: parseFloat(document.getElementById('odometerDropoff').value) || null,
+            odometer_pickup_return: parseFloat(document.getElementById('odometerPickup').value) || null,
+            local_miles: (parseFloat(document.getElementById('odometerPickup').value) || 0) - (parseFloat(document.getElementById('odometerDropoff').value) || 0) || null,
             miles: miles,
             begin_miles: beginMiles,
             end_miles: endMiles,
@@ -1026,7 +1144,7 @@
             tips: tips,
             meal_expenses: meals,
             net_earnings: netEarnings,
-            weather: document.getElementById('weather').value.trim() || null,
+            group_notes: document.getElementById('groupNotes').value.trim() || null,
             maintenance: document.getElementById('maintenance').value.trim() || null,
             added_timestamp: new Date().toISOString(),
             problem_days: problemDays,
@@ -1038,6 +1156,9 @@
     function saveTrip() {
         const trip = buildTripObject();
         if (!trip) return;
+
+        // Save to address book
+        if (trip.client) addToAddressBook(trip);
 
         tripQueue.push(trip);
         try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
@@ -1135,12 +1256,17 @@
         document.getElementById('driveNumber').value = trip.drive_number || '';
         document.getElementById('vehicle').value = trip.vehicle || '';
         document.getElementById('client').value = trip.client || trip.destination || '';
+        document.getElementById('pickupAddress').value = trip.pickup_address || '';
+        document.getElementById('dropoffAddress').value = trip.dropoff_address || '';
+        document.getElementById('odometerDropoff').value = trip.odometer_dropoff || '';
+        document.getElementById('odometerPickup').value = trip.odometer_pickup_return || '';
         document.getElementById('tripType').value = trip.trip_type || 'Day Trip';
         document.getElementById('isRelay').value = trip.is_relay ? 'true' : 'false';
         document.getElementById('tips').value = trip.tips || 0;
         document.getElementById('mealExpenses').value = trip.meal_expenses || 0;
-        document.getElementById('weather').value = trip.weather || '';
+        document.getElementById('groupNotes').value = trip.group_notes || '';
         document.getElementById('maintenance').value = trip.maintenance || '';
+        toggleTextBtn();
         document.getElementById('tourBonusPerDay').value = trip.tour_bonus_per_day || 150;
 
         // Restore miles
@@ -1204,6 +1330,10 @@
         document.getElementById('driveNumber').value = '';
         document.getElementById('vehicle').value = '';
         document.getElementById('client').value = '';
+        document.getElementById('pickupAddress').value = '';
+        document.getElementById('dropoffAddress').value = '';
+        document.getElementById('odometerDropoff').value = '';
+        document.getElementById('odometerPickup').value = '';
         document.getElementById('tripType').value = 'Day Trip';
         document.getElementById('beginMiles').value = '';
         document.getElementById('endMiles').value = '';
@@ -1211,8 +1341,9 @@
         document.getElementById('isRelay').value = 'false';
         document.getElementById('tips').value = '0';
         document.getElementById('mealExpenses').value = '0';
-        document.getElementById('weather').value = '';
+        document.getElementById('groupNotes').value = '';
         document.getElementById('maintenance').value = '';
+        document.getElementById('maintenanceTextBtn').classList.remove('visible');
         document.getElementById('tourBonusPerDay').value = '150';
 
         const grid = document.getElementById('hoursGrid');
@@ -1234,6 +1365,113 @@
         try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e) {}
 
         if (!silent) showToast('Form reset');
+    }
+
+    // ── Address Book ──
+    const ADDRESSBOOK_KEY = 'tripTracker_addressbook';
+
+    function loadAddressBook() {
+        try { return JSON.parse(localStorage.getItem(ADDRESSBOOK_KEY) || '[]'); } catch(e) { return []; }
+    }
+
+    function saveAddressBook(book) {
+        try { localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(book)); } catch(e) {}
+    }
+
+    function addToAddressBook(trip) {
+        const book = loadAddressBook();
+        const existing = book.find(e => e.name.toLowerCase() === trip.client.toLowerCase());
+        if (existing) {
+            if (trip.pickup_address) existing.pickup_address = trip.pickup_address;
+            if (trip.dropoff_address) existing.dropoff_address = trip.dropoff_address;
+            if (trip.group_notes) existing.group_notes = trip.group_notes;
+        } else {
+            book.push({ name: trip.client, pickup_address: trip.pickup_address || '', dropoff_address: trip.dropoff_address || '', group_notes: trip.group_notes || '' });
+        }
+        saveAddressBook(book);
+    }
+
+    function autocompleteClient(value) {
+        const book = loadAddressBook();
+        const dd = document.getElementById('clientDropdown');
+        if (!value || value.length < 2 || book.length === 0) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
+        const matches = book.filter(e => e.name.toLowerCase().includes(value.toLowerCase()));
+        if (matches.length === 0) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
+        dd.innerHTML = matches.map(e => `<div class="ac-item" onmousedown="selectClient('${e.name.replace(/'/g,"\\'")}')"><div class="ac-name">${e.name}</div>${e.pickup_address ? `<div class="ac-detail">${e.pickup_address}</div>` : ''}</div>`).join('');
+        dd.style.display = 'block';
+    }
+
+    function selectClient(name) {
+        const book = loadAddressBook();
+        const entry = book.find(e => e.name === name);
+        if (!entry) return;
+        document.getElementById('client').value = entry.name;
+        if (entry.pickup_address) document.getElementById('pickupAddress').value = entry.pickup_address;
+        if (entry.dropoff_address) document.getElementById('dropoffAddress').value = entry.dropoff_address;
+        if (entry.group_notes) document.getElementById('groupNotes').value = entry.group_notes;
+        document.getElementById('clientDropdown').style.display = 'none';
+        autoSave();
+    }
+
+    function autocompleteAddress(type, value) {
+        const dropdownId = type === 'pickup' ? 'pickupDropdown' : 'dropoffDropdown';
+        const dd = document.getElementById(dropdownId);
+        const book = loadAddressBook();
+        if (!value || value.length < 3) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
+        const all = [];
+        book.forEach(e => {
+            if (e.pickup_address && !all.includes(e.pickup_address)) all.push(e.pickup_address);
+            if (e.dropoff_address && !all.includes(e.dropoff_address)) all.push(e.dropoff_address);
+        });
+        const matches = all.filter(a => a.toLowerCase().includes(value.toLowerCase()));
+        if (matches.length === 0) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
+        dd.innerHTML = matches.map(a => `<div class="ac-item" onmousedown="selectAddress('${type}','${a.replace(/'/g,"\\'")}')""><div class="ac-name">${a}</div></div>`).join('');
+        dd.style.display = 'block';
+    }
+
+    function selectAddress(type, address) {
+        document.getElementById(type === 'pickup' ? 'pickupAddress' : 'dropoffAddress').value = address;
+        document.getElementById(type === 'pickup' ? 'pickupDropdown' : 'dropoffDropdown').style.display = 'none';
+        autoSave();
+    }
+
+    // Close dropdowns on click outside
+    document.addEventListener('click', e => {
+        ['clientDropdown','pickupDropdown','dropoffDropdown'].forEach(id => {
+            const dd = document.getElementById(id);
+            if (dd && !dd.contains(e.target) && e.target.id !== id.replace('Dropdown','')) {
+                dd.style.display = 'none';
+            }
+        });
+    });
+
+    // Save to address book when trip is saved
+    const _origSaveTrip = saveTrip;
+
+    // ── Maintenance Text Button ──
+    function toggleTextBtn() {
+        const val = document.getElementById('maintenance').value.trim();
+        const btn = document.getElementById('maintenanceTextBtn');
+        if (val) btn.classList.add('visible'); else btn.classList.remove('visible');
+    }
+
+    function textMaintenance() {
+        const notes = document.getElementById('maintenance').value.trim();
+        const client = document.getElementById('client').value.trim();
+        const driveNum = document.getElementById('driveNumber').value.trim();
+        const msg = `Hey guys, just a heads up on a few things I noticed or were mentioned by the client on this trip${driveNum ? ' (Drive #' + driveNum + ')' : ''}${client ? ' — ' + client : ''}. Some may need attention, others might be minor — just want to keep you in the loop: ${notes}. Thanks!`;
+        window.location.href = `sms:8644447067,8644447068?body=${encodeURIComponent(msg)}`;
+    }
+
+    // ── Email to JoLynn ──
+    function emailToJoLynn() {
+        const client = document.getElementById('client').value.trim() || '—';
+        const driveNum = document.getElementById('driveNumber').value.trim() || '—';
+        const startDate = document.getElementById('startDate').value || '—';
+        const vehicle = document.getElementById('vehicle').value.trim() || '—';
+        const subject = `Trip Log — Charter #${driveNum} — ${client}`;
+        const body = `Hi JoLynn,\n\nPlease find the trip log for the following:\n\nCharter #: ${driveNum}\nClient: ${client}\nBus #: ${vehicle}\nDate: ${startDate}\n\nThank you,\nJ.R. Grimaldo`;
+        window.location.href = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     // ── Toast ──
