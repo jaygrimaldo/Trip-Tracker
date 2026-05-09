@@ -591,6 +591,56 @@
         .badge-upcoming   { background: rgba(245,158,11,0.15);  color: #f59e0b; }
         .badge-inprogress { background: rgba(59,130,246,0.15);  color: #3b82f6; }
         .badge-completed  { background: rgba(16,185,129,0.15);  color: #10b981; }
+
+        /* ── State Line Table ── */
+        .state-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; }
+        .state-table th { color: var(--text-dim); padding: 4px 3px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; }
+        .state-table td { padding: 3px 2px; vertical-align: middle; }
+        .state-table td input {
+            width: 100%; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 6px; padding: 5px 6px; font-size: 0.78rem;
+            color: var(--text); font-family: 'DM Sans', sans-serif;
+        }
+        .state-table td input:focus { outline: none; border-color: var(--accent); }
+        .sr-miles { display: block; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent); font-weight: 600; min-width: 36px; }
+        .state-row-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; padding: 0 4px; line-height: 1; }
+        .add-state-btn { margin-top: 8px; width: 100%; padding: 8px; background: none; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; }
+        .route-toggle { display: flex; gap: 8px; margin: 10px 0 6px; }
+        .route-toggle-btn { flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+        .route-toggle-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(91,124,247,0.1); }
+
+        /* ── Generate Button ── */
+        .generate-btn {
+            width: 100%; margin: 12px 0 8px; padding: 16px;
+            background: var(--accent); color: white; border: none;
+            border-radius: var(--radius); font-family: 'DM Sans', sans-serif;
+            font-size: 1rem; font-weight: 700; cursor: pointer;
+            display: block; text-align: center;
+        }
+
+        /* ── Preview Modal ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75); z-index: 1000; overflow-y: auto; padding: 16px;
+        }
+        .modal-overlay.open { display: block; }
+        .modal-box { background: var(--bg); border-radius: var(--radius); max-width: 500px; margin: 0 auto; padding: 20px; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+        .modal-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .modal-tab { flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center; }
+        .modal-tab.active { border-color: var(--accent); color: var(--accent); }
+        .preview-content { display: none; }
+        .preview-content.active { display: block; }
+        .preview-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .preview-table th { background: var(--surface-2); padding: 6px 8px; text-align: left; color: var(--text); border: 1px solid var(--border); }
+        .preview-table td { padding: 5px 8px; border: 1px solid var(--border); color: var(--text); }
+        .preview-header { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.82rem; }
+        .preview-field { background: var(--surface); border-radius: 6px; padding: 6px 10px; }
+        .preview-field label { display: block; font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px; }
+        .preview-field span { color: var(--text); font-weight: 500; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+        .modal-download-btn { flex: 1; padding: 12px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+        .modal-close-btn { padding: 12px 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -650,6 +700,15 @@
             <input type="text" id="dropoffAddress" placeholder="106 Jefferson St S, Huntsville AL" oninput="autocompleteAddress('dropoff', this.value)" autocomplete="off">
             <div class="ac-dropdown" id="dropoffDropdown"></div>
         </div>
+        <div class="field" style="margin-top: 14px;">
+            <label style="display:flex; justify-content:space-between;">
+                <span>Route Override</span>
+                <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400;">Leave blank if GPS &amp; Claude agree</span>
+            </label>
+            <input type="text" id="routeOverride" placeholder="e.g. I-77 N, I-81 S, I-40 W, I-75 S, US-72 W" autocomplete="off">
+        </div>
+        <button type="button" class="generate-btn" style="margin-top:12px; font-size:0.9rem; padding:12px;" onclick="calculateStateLines()" id="calcBtn">🔄 Calculate State Lines</button>
+        <div id="stateLinesStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
                 <label>Trip Type</label>
@@ -661,16 +720,6 @@
                 </select>
             </div>
             <div class="field">
-                <label>Start Date</label>
-                <input type="date" id="startDate">
-            </div>
-        </div>
-        <div class="field-row" style="margin-top: 14px;">
-            <div class="field">
-                <label>Begin Miles</label>
-                <input type="number" id="beginMiles" inputmode="decimal" placeholder="0" step="0.1" oninput="updateMiles()">
-            </div>
-            <div class="field">
                 <label>Relay?</label>
                 <select id="isRelay">
                     <option value="false">No</option>
@@ -680,13 +729,47 @@
         </div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
-                <label>Odometer at Dropoff</label>
+                <label>Begin Date</label>
+                <input type="date" id="startDate">
+            </div>
+            <div class="field">
+                <label>End Date</label>
+                <input type="date" id="endDate">
+            </div>
+        </div>
+        <div class="field-row" style="margin-top: 14px;">
+            <div class="field">
+                <label>Begin Miles (Lot)</label>
+                <input type="number" id="beginMiles" inputmode="decimal" placeholder="355949" step="0.1" oninput="updateMiles()">
+            </div>
+            <div class="field">
+                <label>Arrive First Pickup</label>
+                <input type="number" id="odometerAtPickup" inputmode="decimal" placeholder="356136">
+            </div>
+        </div>
+        <div class="field-row" style="margin-top: 14px;">
+            <div class="field">
+                <label>Arrive Dropoff</label>
                 <input type="number" id="odometerDropoff" inputmode="decimal" placeholder="356643">
             </div>
             <div class="field">
-                <label>Odometer at Return Pickup</label>
+                <label>Leave Dropoff (Return)</label>
                 <input type="number" id="odometerPickup" inputmode="decimal" placeholder="356660">
             </div>
+        </div>
+        <div class="field-row" style="margin-top: 14px;">
+            <div class="field">
+                <label>Arrive Return Dropoff</label>
+                <input type="number" id="odometerAtReturnDropoff" inputmode="decimal" placeholder="357147">
+            </div>
+            <div class="field">
+                <label>End Miles (Lot)</label>
+                <input type="number" id="endMiles" inputmode="decimal" placeholder="357336" step="0.1" oninput="updateMiles()">
+            </div>
+        </div>
+        <div style="text-align:right; margin-top:6px;">
+            <span style="font-size:0.75rem; color:var(--text-dim);">Total Miles: </span>
+            <span id="totalMilesDisplay" style="font-family:'JetBrains Mono',monospace; font-size:1rem; font-weight:700; color:var(--accent);">0</span>
         </div>
     </div>
 
@@ -783,20 +866,6 @@
         <div class="problem-alert" id="problemAlert"></div>
     </div>
 
-    <!-- End Miles -->
-    <div class="section">
-        <div class="field-row">
-            <div class="field">
-                <label>End Miles</label>
-                <input type="number" id="endMiles" inputmode="decimal" placeholder="0" step="0.1" oninput="updateMiles()">
-            </div>
-            <div class="field" style="display:flex; flex-direction:column; justify-content:flex-end;">
-                <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Total Miles</span>
-                <span id="totalMilesDisplay" style="font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-top: 4px;">0</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Saved Trips Queue -->
     <div class="queue-section" id="queueSection">
         <div class="queue-header">
@@ -817,14 +886,34 @@
         </button>
     </div>
 
+    <button type="button" class="generate-btn" onclick="generateForms()">📄 Generate &amp; Preview Forms</button>
+
     <button type="button" class="action-btn email-btn visible" style="max-width:500px; margin:0 auto 8px; display:block;" onclick="emailToJoLynn()">📧 Email Forms to JoLynn</button>
 
     <a href="#" class="reset-link" onclick="resetForm(); return false;">Reset Form</a>
 
 </div>
 
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+    <div class="modal-box">
+        <div class="modal-title">📄 Preview Forms</div>
+        <div class="modal-tabs">
+            <button class="modal-tab active" onclick="switchTab('mileage')">Mileage Log</button>
+            <button class="modal-tab" onclick="switchTab('charter')">Charter Form</button>
+        </div>
+        <div class="preview-content active" id="previewMileage"></div>
+        <div class="preview-content" id="previewCharter"></div>
+        <div class="modal-actions">
+            <button class="modal-download-btn" onclick="downloadForms()">⬇️ Download Both PDFs</button>
+            <button class="modal-close-btn" onclick="closePreview()">Close</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
     // ── Theme Toggle ──
     const THEME_KEY = 'tripTracker_theme';
@@ -843,6 +932,7 @@
     // ── State ──
     let currentDivision = 'charter';
     let currentStatus = 'upcoming';
+    let stateLineData = [];
     let tripQueue = [];
 
     // ── Status Toggle ──
@@ -875,14 +965,17 @@
                 const s = JSON.parse(auto);
                 if (s.driveNumber) document.getElementById('driveNumber').value = s.driveNumber;
                 if (s.vehicle) document.getElementById('vehicle').value = s.vehicle;
-                if (s.destination) document.getElementById('client').value = s.destination; // legacy compat
+                if (s.destination) document.getElementById('client').value = s.destination;
                 if (s.client) document.getElementById('client').value = s.client;
                 if (s.pickupAddress) document.getElementById('pickupAddress').value = s.pickupAddress;
                 if (s.dropoffAddress) document.getElementById('dropoffAddress').value = s.dropoffAddress;
+                if (s.odometerAtPickup) document.getElementById('odometerAtPickup').value = s.odometerAtPickup;
                 if (s.odometerDropoff) document.getElementById('odometerDropoff').value = s.odometerDropoff;
                 if (s.odometerPickup) document.getElementById('odometerPickup').value = s.odometerPickup;
+                if (s.odometerAtReturnDropoff) document.getElementById('odometerAtReturnDropoff').value = s.odometerAtReturnDropoff;
                 if (s.tripType) document.getElementById('tripType').value = s.tripType;
                 if (s.startDate) document.getElementById('startDate').value = s.startDate;
+                if (s.endDate) document.getElementById('endDate').value = s.endDate;
                 if (s.beginMiles) document.getElementById('beginMiles').value = s.beginMiles;
                 if (s.endMiles) document.getElementById('endMiles').value = s.endMiles;
                 if (s.isRelay) document.getElementById('isRelay').value = s.isRelay;
@@ -890,9 +983,17 @@
                 if (s.mealExpenses !== undefined) document.getElementById('mealExpenses').value = s.mealExpenses;
                 if (s.groupNotes) document.getElementById('groupNotes').value = s.groupNotes;
                 if (s.maintenance) { document.getElementById('maintenance').value = s.maintenance; toggleTextBtn(); }
+                if (s.routeOverride) document.getElementById('routeOverride').value = s.routeOverride;
                 if (s.tourBonusPerDay) document.getElementById('tourBonusPerDay').value = s.tourBonusPerDay;
                 if (s.division) { currentDivision = s.division; setDivision(s.division); }
                 if (s.trip_status) setStatus(s.trip_status);
+                if (s.stateLines && s.stateLines.length > 0) {
+                    stateLineData = s.stateLines;
+                    const status = document.getElementById('stateLinesStatus');
+                    status.style.display = 'block';
+                    status.style.color = 'var(--tour-green)';
+                    status.textContent = `✅ ${stateLineData.length} state lines loaded`;
+                }
                 // Restore hours grid
                 if (s.days && s.days.length > 0) {
                     const grid = document.getElementById('hoursGrid');
@@ -941,10 +1042,13 @@
                 client: document.getElementById('client').value,
                 pickupAddress: document.getElementById('pickupAddress').value,
                 dropoffAddress: document.getElementById('dropoffAddress').value,
+                odometerAtPickup: document.getElementById('odometerAtPickup').value,
                 odometerDropoff: document.getElementById('odometerDropoff').value,
                 odometerPickup: document.getElementById('odometerPickup').value,
+                odometerAtReturnDropoff: document.getElementById('odometerAtReturnDropoff').value,
                 tripType: document.getElementById('tripType').value,
                 startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
                 beginMiles: document.getElementById('beginMiles').value,
                 endMiles: document.getElementById('endMiles').value,
                 isRelay: document.getElementById('isRelay').value,
@@ -952,7 +1056,9 @@
                 mealExpenses: document.getElementById('mealExpenses').value,
                 groupNotes: document.getElementById('groupNotes').value,
                 maintenance: document.getElementById('maintenance').value,
+                routeOverride: document.getElementById('routeOverride').value,
                 tourBonusPerDay: document.getElementById('tourBonusPerDay').value,
+                stateLines: getStateLineData(),
                 days: days
             };
             localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
@@ -1171,8 +1277,10 @@
             client: dest,
             pickup_address: document.getElementById('pickupAddress').value.trim(),
             dropoff_address: document.getElementById('dropoffAddress').value.trim(),
+            odometer_at_pickup: parseFloat(document.getElementById('odometerAtPickup').value) || null,
             odometer_dropoff: parseFloat(document.getElementById('odometerDropoff').value) || null,
             odometer_pickup_return: parseFloat(document.getElementById('odometerPickup').value) || null,
+            odometer_at_return_dropoff: parseFloat(document.getElementById('odometerAtReturnDropoff').value) || null,
             local_miles: (parseFloat(document.getElementById('odometerPickup').value) || 0) - (parseFloat(document.getElementById('odometerDropoff').value) || 0) || null,
             miles: miles,
             begin_miles: beginMiles,
@@ -1182,6 +1290,7 @@
             trip_type: document.getElementById('tripType').value,
             num_days: numDays,
             start_date: formattedDate,
+            end_date: document.getElementById('endDate').value,
             raw_date: rawDate,
             daily_hours: dailyHours,
             daily_times: dailyTimes,
@@ -1196,6 +1305,8 @@
             net_earnings: netEarnings,
             group_notes: document.getElementById('groupNotes').value.trim() || null,
             maintenance: document.getElementById('maintenance').value.trim() || null,
+            route_override: document.getElementById('routeOverride').value.trim() || null,
+            state_lines: getStateLineData(),
             added_timestamp: new Date().toISOString(),
             problem_days: problemDays,
             good_days: goodDays
@@ -1312,16 +1423,30 @@
         document.getElementById('client').value = trip.client || trip.destination || '';
         document.getElementById('pickupAddress').value = trip.pickup_address || '';
         document.getElementById('dropoffAddress').value = trip.dropoff_address || '';
+        document.getElementById('odometerAtPickup').value = trip.odometer_at_pickup || '';
         document.getElementById('odometerDropoff').value = trip.odometer_dropoff || '';
         document.getElementById('odometerPickup').value = trip.odometer_pickup_return || '';
+        document.getElementById('odometerAtReturnDropoff').value = trip.odometer_at_return_dropoff || '';
         document.getElementById('tripType').value = trip.trip_type || 'Day Trip';
         document.getElementById('isRelay').value = trip.is_relay ? 'true' : 'false';
+        document.getElementById('endDate').value = trip.end_date || '';
         document.getElementById('tips').value = trip.tips || 0;
         document.getElementById('mealExpenses').value = trip.meal_expenses || 0;
         document.getElementById('groupNotes').value = trip.group_notes || '';
         document.getElementById('maintenance').value = trip.maintenance || '';
         toggleTextBtn();
         document.getElementById('tourBonusPerDay').value = trip.tour_bonus_per_day || 150;
+        // Restore state lines
+        stateLineData = trip.state_lines || [];
+        const slStatus = document.getElementById('stateLinesStatus');
+        if (stateLineData.length > 0) {
+            slStatus.style.display = 'block';
+            slStatus.style.color = 'var(--tour-green)';
+            slStatus.textContent = `✅ ${stateLineData.length} state lines loaded`;
+        } else {
+            slStatus.style.display = 'none';
+        }
+        document.getElementById('routeOverride').value = trip.route_override || '';
 
         // Restore miles
         document.getElementById('beginMiles').value = trip.begin_miles || '';
@@ -1387,19 +1512,25 @@
         document.getElementById('client').value = '';
         document.getElementById('pickupAddress').value = '';
         document.getElementById('dropoffAddress').value = '';
+        document.getElementById('odometerAtPickup').value = '';
         document.getElementById('odometerDropoff').value = '';
         document.getElementById('odometerPickup').value = '';
+        document.getElementById('odometerAtReturnDropoff').value = '';
         document.getElementById('tripType').value = 'Day Trip';
         document.getElementById('beginMiles').value = '';
         document.getElementById('endMiles').value = '';
         document.getElementById('totalMilesDisplay').textContent = '0';
         document.getElementById('isRelay').value = 'false';
+        document.getElementById('endDate').value = '';
         document.getElementById('tips').value = '0';
         document.getElementById('mealExpenses').value = '0';
         document.getElementById('groupNotes').value = '';
         document.getElementById('maintenance').value = '';
         document.getElementById('maintenanceTextBtn').classList.remove('visible');
         document.getElementById('tourBonusPerDay').value = '150';
+        stateLineData = [];
+        document.getElementById('stateLinesStatus').style.display = 'none';
+        document.getElementById('routeOverride').value = '';
 
         const grid = document.getElementById('hoursGrid');
         grid.innerHTML = `
@@ -1516,6 +1647,336 @@
         const driveNum = document.getElementById('driveNumber').value.trim();
         const msg = `Hey guys, just a heads up on a few things I noticed or were mentioned by the client on this trip${driveNum ? ' (Drive #' + driveNum + ')' : ''}${client ? ' — ' + client : ''}. Some may need attention, others might be minor — just want to keep you in the loop: ${notes}. Thanks!`;
         window.location.href = `sms:8644447067,8644447068?body=${encodeURIComponent(msg)}`;
+    }
+
+    // ── Calculate State Lines via Claude API ──
+    async function calculateStateLines() {
+        const destination = document.getElementById('dropoffAddress').value.trim();
+        const pickup = document.getElementById('pickupAddress').value.trim();
+        const beginOdo = parseFloat(document.getElementById('beginMiles').value) || 0;
+        const routeOverride = document.getElementById('routeOverride').value.trim();
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (!destination) { showToast('⚠️ Enter dropoff address first'); return; }
+        if (!beginOdo) { showToast('⚠️ Enter beginning miles first'); return; }
+
+        const btn = document.getElementById('calcBtn');
+        const status = document.getElementById('stateLinesStatus');
+        btn.textContent = '⏳ Calculating...';
+        btn.disabled = true;
+        status.style.display = 'block';
+        status.textContent = 'Contacting Claude...';
+
+        const origin = '3 Cauley Dr, Greenville, SC 29609';
+        const prompt = `You are a bus route calculator for J.R. Grimaldo, a professional bus driver based in Greenville, SC.
+
+Bus lot (origin/end): ${origin}
+First pickup: ${pickup || 'same as origin area'}
+Destination (dropoff): ${destination}
+Beginning odometer at lot: ${beginOdo}
+${routeOverride ? `Route to use (GPS/agreed route): ${routeOverride}` : 'Use the best highway route for a 56-passenger charter bus. Avoid low bridges and restricted roads.'}
+${startDate ? `Begin date: ${startDate}` : ''}
+${endDate ? `End date: ${endDate}` : ''}
+
+Calculate BOTH outbound and return state line crossings. For each row provide estimated odometer at the END of that state section based on beginning odometer of ${beginOdo}.
+
+Return ONLY valid JSON, no markdown, no explanation:
+{
+  "outbound": [
+    {"date": "${startDate || ''}", "state": "SC-NC", "highways": "I-85 N", "odometer": 0, "miles": 0},
+    ...
+  ],
+  "return": [
+    {"date": "${endDate || startDate || ''}", "state": "AL-TN", "highways": "US-72 E", "odometer": 0, "miles": 0},
+    ...
+  ],
+  "route_summary": "brief description of route"
+}`;
+
+        try {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1000,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+
+            const data = await response.json();
+            if (!data.content || !data.content[0]) throw new Error('No response');
+            const text = data.content[0].text.replace(/```json|```/g, '').trim();
+            const result = JSON.parse(text);
+
+            stateLineData = [
+                ...(result.outbound || []),
+                ...(result.return || [])
+            ];
+
+            status.textContent = `✅ ${stateLineData.length} state lines calculated — ${result.route_summary || ''}`;
+            status.style.color = 'var(--tour-green)';
+            showToast(`✅ State lines ready!`);
+            autoSave();
+
+        } catch(e) {
+            status.textContent = '❌ Error — check connection and try again';
+            status.style.color = 'var(--danger)';
+            showToast('❌ Calculation failed');
+            console.error(e);
+        } finally {
+            btn.textContent = '🔄 Calculate State Lines';
+            btn.disabled = false;
+        }
+    }
+
+    function getStateLineData() { return stateLineData; }
+
+    // ── Form Generation & Preview ──
+    function getFormData() {
+        const beginOdo = parseFloat(document.getElementById('beginMiles').value) || 0;
+        const odoAtPickup = parseFloat(document.getElementById('odometerAtPickup').value) || 0;
+        const odoDropoff = parseFloat(document.getElementById('odometerDropoff').value) || 0;
+        const odoPickup = parseFloat(document.getElementById('odometerPickup').value) || 0;
+        const odoReturnDropoff = parseFloat(document.getElementById('odometerAtReturnDropoff').value) || 0;
+        const endOdo = parseFloat(document.getElementById('endMiles').value) || 0;
+        return {
+            driveNumber: document.getElementById('driveNumber').value.trim(),
+            vehicle: document.getElementById('vehicle').value.trim(),
+            client: document.getElementById('client').value.trim(),
+            pickupAddress: document.getElementById('pickupAddress').value.trim(),
+            dropoffAddress: document.getElementById('dropoffAddress').value.trim(),
+            startDate: document.getElementById('startDate').value,
+            endDate: document.getElementById('endDate').value,
+            beginOdo, odoAtPickup, odoDropoff, odoPickup, odoReturnDropoff, endOdo,
+            legLotToPickup: odoAtPickup > beginOdo ? odoAtPickup - beginOdo : 0,
+            legPickupToDropoff: odoDropoff > odoAtPickup ? odoDropoff - odoAtPickup : 0,
+            legLocal: odoPickup > odoDropoff ? odoPickup - odoDropoff : 0,
+            legReturnToDropoff: odoReturnDropoff > odoPickup ? odoReturnDropoff - odoPickup : 0,
+            legDropoffToLot: endOdo > odoReturnDropoff ? endOdo - odoReturnDropoff : 0,
+            totalMiles: endOdo > beginOdo ? endOdo - beginOdo : 0,
+            stateLines: getStateLineData()
+        };
+    }
+
+    function generateForms() {
+        const d = getFormData();
+        if (!d.client) { showToast('⚠️ Enter a client name first'); return; }
+
+        // Build mileage log preview
+        let mlRows = d.stateLines.map(row => `
+            <tr>
+                <td>${row.date}</td><td>${row.state}</td>
+                <td>${row.highways}</td><td>${row.odometer}</td>
+                <td style="text-align:center; font-weight:600;">${row.miles}</td>
+            </tr>`).join('');
+        if (!mlRows) mlRows = '<tr><td colspan="5" style="text-align:center; color:#999; padding:12px;">No state lines entered yet</td></tr>';
+
+        document.getElementById('previewMileage').innerHTML = `
+            <div class="preview-header">
+                <div class="preview-field"><label>Bus #</label><span>${d.vehicle || '—'}</span></div>
+                <div class="preview-field"><label>Charter #</label><span>${d.driveNumber || '—'}</span></div>
+                <div class="preview-field"><label>Driver</label><span>J.R. Grimaldo</span></div>
+                <div class="preview-field"><label>Client</label><span>${d.client}</span></div>
+                <div class="preview-field"><label>Origin</label><span>${d.pickupAddress || '—'}</span></div>
+                <div class="preview-field"><label>Destination</label><span>${d.dropoffAddress || '—'}</span></div>
+                <div class="preview-field"><label>Begin Date</label><span>${d.startDate || '—'}</span></div>
+                <div class="preview-field"><label>End Date</label><span>${d.endDate || '—'}</span></div>
+            </div>
+            <div class="preview-field" style="margin-bottom:10px;"><label>Beginning Trip Odometer</label><span>${d.beginOdo.toLocaleString()}</span></div>
+            <table class="preview-table">
+                <thead><tr><th>Date</th><th>State</th><th>Highways</th><th>Odometer</th><th>Miles</th></tr></thead>
+                <tbody>${mlRows}</tbody>
+            </table>`;
+
+        // Build charter form preview
+        document.getElementById('previewCharter').innerHTML = `
+            <div class="preview-header">
+                <div class="preview-field"><label>Bus #</label><span>${d.vehicle || '—'}</span></div>
+                <div class="preview-field"><label>Charter #</label><span>${d.driveNumber || '—'}</span></div>
+                <div class="preview-field"><label>Driver</label><span>J.R. Grimaldo</span></div>
+                <div class="preview-field"><label>Client</label><span>${d.client}</span></div>
+                <div class="preview-field"><label>Begin Date</label><span>${d.startDate || '—'}</span></div>
+                <div class="preview-field"><label>End Date</label><span>${d.endDate || '—'}</span></div>
+                <div class="preview-field"><label>Begin Odometer</label><span>${d.beginOdo.toLocaleString()}</span></div>
+                <div class="preview-field"><label>End Odometer</label><span>${d.endOdo.toLocaleString()}</span></div>
+            </div>
+            <table class="preview-table">
+                <thead><tr><th>Leg</th><th>Miles</th></tr></thead>
+                <tbody>
+                    <tr><td>Lot → First Pickup</td><td style="text-align:center; font-weight:600;">${d.legLotToPickup || '—'}</td></tr>
+                    <tr><td>Pickup → Dropoff</td><td style="text-align:center; font-weight:600;">${d.legPickupToDropoff || '—'}</td></tr>
+                    <tr><td>Local at Destination</td><td style="text-align:center; font-weight:600;">${d.legLocal || '—'}</td></tr>
+                    <tr><td>Return → Dropoff</td><td style="text-align:center; font-weight:600;">${d.legReturnToDropoff || '—'}</td></tr>
+                    <tr><td>Dropoff → Lot</td><td style="text-align:center; font-weight:600;">${d.legDropoffToLot || '—'}</td></tr>
+                    <tr style="background:var(--surface-2);"><td><strong>Total Miles</strong></td><td style="text-align:center; font-weight:700;">${d.totalMiles.toLocaleString()}</td></tr>
+                </tbody>
+            </table>`;
+
+        document.getElementById('previewModal').classList.add('open');
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.preview-content').forEach(c => c.classList.remove('active'));
+        if (tab === 'mileage') {
+            document.querySelectorAll('.modal-tab')[0].classList.add('active');
+            document.getElementById('previewMileage').classList.add('active');
+        } else {
+            document.querySelectorAll('.modal-tab')[1].classList.add('active');
+            document.getElementById('previewCharter').classList.add('active');
+        }
+    }
+
+    function closePreview() {
+        document.getElementById('previewModal').classList.remove('open');
+    }
+
+    function downloadForms() {
+        if (!window.jspdf) { showToast('⚠️ PDF library not loaded yet, try again'); return; }
+        const { jsPDF } = window.jspdf;
+        const d = getFormData();
+
+        // ── Mileage Log PDF ──
+        const ml = new jsPDF({ unit: 'pt', format: 'letter' });
+        const pw = 612, margin = 40;
+        let y = 45;
+
+        ml.setFontSize(13).setFont(undefined, 'bold');
+        ml.text("JEAN'S BUS SERVICE, INC.", pw/2, y, {align:'center'});
+        y += 24;
+
+        const leftFields = [['Bus #:', d.vehicle], ['Charter #:', d.driveNumber], ['Origin:', d.pickupAddress], ['Begin Date:', d.startDate]];
+        const rightFields = [['Driver:', 'J.R. Grimaldo'], ['Client:', d.client], ['Destination:', d.dropoffAddress], ['End Date:', d.endDate]];
+        ml.setFontSize(8);
+        leftFields.forEach(([lbl, val], i) => {
+            const fy = y + i * 19;
+            ml.setFont(undefined,'bold').text(lbl, margin, fy);
+            ml.setFont(undefined,'normal').text(val || '', margin + 58, fy);
+            ml.line(margin + 58, fy + 2, margin + 195, fy + 2);
+            ml.setFont(undefined,'bold').text(rightFields[i][0], pw/2 + 10, fy);
+            ml.setFont(undefined,'normal').text(rightFields[i][1] || '', pw/2 + 68, fy);
+            ml.line(pw/2 + 68, fy + 2, pw - margin, fy + 2);
+        });
+        y += 4 * 19 + 10;
+
+        ml.setFont(undefined,'bold').setFontSize(9);
+        ml.text('Mileage / Driver Log', margin, y);
+        ml.rect(pw/2 - 20, y - 11, pw/2 - margin + 20, 16);
+        ml.setFont(undefined,'normal').setFontSize(8);
+        ml.text(`Beginning Trip Odometer Reading: ${d.beginOdo.toLocaleString()}`, pw/2 - 15, y);
+        y += 16;
+
+        const colX = [margin, margin+50, margin+100, margin+300, margin+400];
+        const colW = [50, 50, 200, 100, 72];
+        const headers = ['DATE','STATE','HIGHWAYS USED','ODOMETER','TOTAL MILES'];
+        ml.setFillColor(80,80,80).rect(margin, y-9, pw - 2*margin, 16, 'F');
+        ml.setTextColor(255).setFont(undefined,'bold').setFontSize(7.5);
+        headers.forEach((h,i) => ml.text(h, colX[i]+3, y));
+        ml.setTextColor(0).setFont(undefined,'normal');
+        y += 8;
+
+        const rowH = 17;
+        d.stateLines.forEach(row => {
+            y += rowH;
+            ml.rect(margin, y-10, pw-2*margin, rowH);
+            ml.setFontSize(8);
+            ml.text(row.date || '', colX[0]+3, y);
+            ml.text(row.state || '', colX[1]+3, y);
+            ml.text((row.highways || '').substring(0,38), colX[2]+3, y);
+            ml.text(row.odometer || '', colX[3]+3, y);
+            ml.text(row.miles || '', colX[4]+3, y);
+        });
+        const blankRows = Math.max(0, 8 - d.stateLines.length);
+        for (let i = 0; i < blankRows; i++) { y += rowH; ml.rect(margin, y-10, pw-2*margin, rowH); }
+
+        y += 25;
+        ml.line(margin, y, pw-margin, y);
+        y += 22;
+        ml.setFont(undefined,'bold').setFontSize(9).text('Drivers Signature:', margin, y);
+        ml.line(margin+105, y+2, margin+260, y+2);
+        ml.setFont(undefined,'italic').setFontSize(11).text('J.R. Grimaldo', margin+108, y);
+        ml.setFont(undefined,'bold').setFontSize(9).text('Date:', pw-130, y);
+        ml.setFont(undefined,'normal').text(d.endDate || d.startDate || '', pw-100, y);
+        ml.line(pw-105, y+2, pw-margin, y+2);
+
+        ml.save(`mileage_log_${d.driveNumber || 'trip'}.pdf`);
+
+        // ── Charter Order Form PDF ──
+        setTimeout(() => {
+            const co = new jsPDF({ unit: 'pt', format: 'letter' });
+            y = 40;
+            co.setFontSize(13).setFont(undefined,'bold');
+            co.text("Jean's Bus Service, Inc.", pw/2, y, {align:'center'});
+            y += 14;
+            co.setFontSize(8).setFont(undefined,'normal');
+            co.text('207 Furman Hall Road  •  Greenville, SC 29609  •  864-242-1673', pw/2, y, {align:'center'});
+            y += 20;
+
+            co.setFont(undefined,'bold').setFontSize(9);
+            co.text(`Charter Order: ${d.driveNumber || '—'}`, pw/2+10, y);
+            co.text(`Driver: J.R. Grimaldo`, pw/2+10, y+14);
+            co.text(`Bus #: ${d.vehicle || '—'}   Bus Type: 56 Passenger`, pw/2+10, y+28);
+            co.text(`Client: ${d.client}`, margin, y);
+            co.text(`Origin: ${d.pickupAddress || '—'}`, margin, y+14);
+            co.text(`Destination: ${d.dropoffAddress || '—'}`, margin, y+28);
+            co.text(`Begin Date: ${d.startDate || '—'}   End Date: ${d.endDate || '—'}`, margin, y+42);
+            y += 62;
+
+            co.line(margin, y, pw-margin, y);
+            y += 16;
+
+            // Itinerary table
+            const iHeaders = ['Location','Date','Actual Miles'];
+            const iColX = [margin, margin+260, margin+360];
+            co.setFillColor(80,80,80).rect(margin, y-10, pw-2*margin, 16, 'F');
+            co.setTextColor(255).setFont(undefined,'bold').setFontSize(8);
+            iHeaders.forEach((h,i) => co.text(h, iColX[i]+3, y));
+            co.setTextColor(0).setFont(undefined,'normal');
+            y += 8;
+
+            const legs = [
+                ['OnDuty – Greenville Bus Lot', d.startDate, ''],
+                [`Pickup – ${d.pickupAddress || 'First Pickup'}`, d.startDate, d.legLotToPickup || ''],
+                [`Dropoff – ${d.dropoffAddress || 'Destination'}`, d.startDate, d.legPickupToDropoff || ''],
+                [`Local – ${d.dropoffAddress ? d.dropoffAddress.split(',').slice(-2).join(',').trim() : 'Destination'}`, '', d.legLocal || ''],
+                [`Pickup (Return) – ${d.dropoffAddress || 'Destination'}`, d.endDate, ''],
+                [`Dropoff – ${d.pickupAddress || 'Return Dropoff'}`, d.endDate, d.legReturnToDropoff || ''],
+                ['OffDuty – Greenville Bus Lot', d.endDate, d.legDropoffToLot || ''],
+            ];
+            legs.forEach(([loc, date, miles]) => {
+                y += 22;
+                co.rect(margin, y-12, pw-2*margin, 22);
+                co.setFontSize(8);
+                co.text(loc.substring(0,52), iColX[0]+3, y);
+                co.text(date || '', iColX[1]+3, y);
+                co.setFont(undefined,'bold').text(String(miles || ''), iColX[2]+3, y);
+                co.setFont(undefined,'normal');
+            });
+
+            y += 30;
+            co.line(margin, y, pw-margin, y);
+            y += 16;
+
+            co.setFont(undefined,'bold').setFontSize(9);
+            co.text('End Odometer:', margin, y);
+            co.setFont(undefined,'normal').text(d.endOdo.toLocaleString(), margin+90, y);
+            co.setFont(undefined,'bold').text('Begin Odometer:', margin+160, y);
+            co.setFont(undefined,'normal').text(d.beginOdo.toLocaleString(), margin+255, y);
+            co.setFont(undefined,'bold').text('Total Miles:', margin+330, y);
+            co.setFont(undefined,'bold').setFontSize(11).text(String(d.totalMiles.toLocaleString()), margin+400, y);
+
+            y += 30;
+            co.setFont(undefined,'bold').setFontSize(9).text('Driver Signature:', margin, y);
+            co.line(margin+105, y+2, margin+280, y+2);
+            co.setFont(undefined,'italic').setFontSize(11).text('J.R. Grimaldo', margin+108, y);
+            co.setFont(undefined,'bold').setFontSize(9).text('Date:', pw-130, y);
+            co.setFont(undefined,'normal').text(d.endDate || d.startDate || '', pw-100, y);
+
+            co.save(`charter_form_${d.driveNumber || 'trip'}.pdf`);
+            showToast('✅ Both PDFs downloaded!');
+        }, 500);
     }
 
     // ── Email to JoLynn ──
