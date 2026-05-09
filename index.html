@@ -559,6 +559,38 @@
         .action-btn.visible { display: block; }
         .action-btn.text-btn { border-color: #3b82f6; color: #3b82f6; }
         .action-btn.email-btn { border-color: var(--accent); color: var(--accent); }
+
+        /* ── Trip Status ── */
+        .status-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .status-btn {
+            padding: 10px 8px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text-dim);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .status-btn.active-upcoming  { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
+        .status-btn.active-inprogress { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.1); }
+        .status-btn.active-completed  { border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.1); }
+
+        .status-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 6px;
+            font-size: 0.7rem; font-weight: 600; margin-left: 6px;
+        }
+        .badge-upcoming   { background: rgba(245,158,11,0.15);  color: #f59e0b; }
+        .badge-inprogress { background: rgba(59,130,246,0.15);  color: #3b82f6; }
+        .badge-completed  { background: rgba(16,185,129,0.15);  color: #10b981; }
     </style>
 </head>
 <body>
@@ -588,6 +620,11 @@
     <!-- Trip Info -->
     <div class="section">
         <div class="section-title">Trip Info</div>
+        <div class="status-toggle">
+            <button type="button" class="status-btn active-upcoming" id="statusUpcoming" onclick="setStatus('upcoming')">📅 Upcoming</button>
+            <button type="button" class="status-btn" id="statusInprogress" onclick="setStatus('inprogress')">🚌 In Progress</button>
+            <button type="button" class="status-btn" id="statusCompleted" onclick="setStatus('completed')">✅ Completed</button>
+        </div>
         <div class="field-row" style="margin-bottom: 14px;">
             <div class="field">
                 <label>Drive #</label>
@@ -798,7 +835,6 @@
         localStorage.setItem(THEME_KEY, isNight ? 'night' : 'day');
     }
 
-    // Restore saved theme
     if (localStorage.getItem(THEME_KEY) === 'night') {
         document.body.classList.add('night-mode');
         document.getElementById('themeToggle').textContent = '☀️ Day';
@@ -806,7 +842,18 @@
 
     // ── State ──
     let currentDivision = 'charter';
+    let currentStatus = 'upcoming';
     let tripQueue = [];
+
+    // ── Status Toggle ──
+    function setStatus(status) {
+        currentStatus = status;
+        ['upcoming','inprogress','completed'].forEach(s => {
+            const btn = document.getElementById('status' + s.charAt(0).toUpperCase() + s.slice(1));
+            btn.className = 'status-btn' + (s === status ? ' active-' + s : '');
+        });
+        autoSave();
+    }
 
     // ── Auto-Save Keys ──
     const AUTOSAVE_KEY = 'tripTracker_autosave';
@@ -845,6 +892,7 @@
                 if (s.maintenance) { document.getElementById('maintenance').value = s.maintenance; toggleTextBtn(); }
                 if (s.tourBonusPerDay) document.getElementById('tourBonusPerDay').value = s.tourBonusPerDay;
                 if (s.division) { currentDivision = s.division; setDivision(s.division); }
+                if (s.trip_status) setStatus(s.trip_status);
                 // Restore hours grid
                 if (s.days && s.days.length > 0) {
                     const grid = document.getElementById('hoursGrid');
@@ -887,6 +935,7 @@
 
             const state = {
                 division: currentDivision,
+                trip_status: currentStatus,
                 driveNumber: document.getElementById('driveNumber').value,
                 vehicle: document.getElementById('vehicle').value,
                 client: document.getElementById('client').value,
@@ -1118,6 +1167,7 @@
         return {
             drive_number: document.getElementById('driveNumber').value.trim(),
             division: currentDivision,
+            trip_status: currentStatus,
             client: dest,
             pickup_address: document.getElementById('pickupAddress').value.trim(),
             dropoff_address: document.getElementById('dropoffAddress').value.trim(),
@@ -1223,18 +1273,21 @@
 
         section.classList.add('visible');
         badge.textContent = tripQueue.length;
-        list.innerHTML = tripQueue.map((t, i) => `
+        list.innerHTML = tripQueue.map((t, i) => {
+            const statusLabel = t.trip_status === 'completed' ? 'Completed' : t.trip_status === 'inprogress' ? 'In Progress' : 'Upcoming';
+            const statusClass = t.trip_status === 'completed' ? 'badge-completed' : t.trip_status === 'inprogress' ? 'badge-inprogress' : 'badge-upcoming';
+            return `
             <div class="queue-item">
                 <div>
-                    <div class="qi-info">${t.client || t.destination}</div>
+                    <div class="qi-info">${t.client || t.destination}<span class="status-badge ${statusClass}">${statusLabel}</span></div>
                     <div class="qi-detail">${t.start_date} · ${t.total_hours}h · $${t.net_earnings.toFixed(0)}</div>
                 </div>
                 <div class="qi-actions">
                     <button class="qi-edit" onclick="editFromQueue(${i})">✏️</button>
                     <button class="qi-remove" onclick="removeFromQueue(${i})">×</button>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
 
     function removeFromQueue(idx) {
@@ -1255,6 +1308,7 @@
         // Load into form
         document.getElementById('driveNumber').value = trip.drive_number || '';
         document.getElementById('vehicle').value = trip.vehicle || '';
+        setStatus(trip.trip_status || 'upcoming');
         document.getElementById('client').value = trip.client || trip.destination || '';
         document.getElementById('pickupAddress').value = trip.pickup_address || '';
         document.getElementById('dropoffAddress').value = trip.dropoff_address || '';
@@ -1329,6 +1383,7 @@
     function resetForm(silent) {
         document.getElementById('driveNumber').value = '';
         document.getElementById('vehicle').value = '';
+        setStatus('upcoming');
         document.getElementById('client').value = '';
         document.getElementById('pickupAddress').value = '';
         document.getElementById('dropoffAddress').value = '';
