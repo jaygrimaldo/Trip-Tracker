@@ -641,6 +641,18 @@
         .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
         .modal-download-btn { flex: 1; padding: 12px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
         .modal-close-btn { padding: 12px 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; }
+
+        /* ── Scan Button ── */
+        .scan-btn {
+            width: 100%; padding: 14px; margin-bottom: 16px;
+            background: var(--surface); border: 2px dashed var(--border);
+            border-radius: var(--radius); font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem; font-weight: 600; color: var(--text);
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 8px;
+        }
+        .scan-btn:active { background: var(--surface-2); }
+        .scan-status { font-size: 0.8rem; text-align: center; margin: -10px 0 10px; display: none; }
     </style>
 </head>
 <body>
@@ -670,6 +682,11 @@
     <!-- Trip Info -->
     <div class="section">
         <div class="section-title">Trip Info</div>
+        <input type="file" id="charterFormInput" accept="image/*" capture="environment" style="display:none;" onchange="processCharterForm(this)">
+        <button type="button" class="scan-btn" onclick="document.getElementById('charterFormInput').click()">
+            📷 Scan Charter Order Form
+        </button>
+        <div class="scan-status" id="scanStatus"></div>
         <div class="status-toggle">
             <button type="button" class="status-btn active-upcoming" id="statusUpcoming" onclick="setStatus('upcoming')">📅 Upcoming</button>
             <button type="button" class="status-btn" id="statusInprogress" onclick="setStatus('inprogress')">🚌 In Progress</button>
@@ -829,6 +846,17 @@
             <label>Group Notes</label>
             <textarea id="groupNotes" rows="3" placeholder="Notes about this client / group — pre-fills on repeat trips"></textarea>
         </div>
+        <div class="field-row" style="margin-top: 14px;">
+            <div class="field">
+                <label>Group Contact Name</label>
+                <input type="text" id="contactName" placeholder="Wes Williams" oninput="toggleReviewBtn(); autoSave();">
+            </div>
+            <div class="field">
+                <label>Contact Phone</label>
+                <input type="tel" id="contactPhone" inputmode="tel" placeholder="864-555-1234" oninput="toggleReviewBtn(); autoSave();">
+            </div>
+        </div>
+        <button type="button" class="action-btn text-btn" id="reviewTextBtn" onclick="sendReviewRequest()" style="margin-top:10px;">⭐ Send Review Request</button>
         <div class="field" style="margin-top: 14px;">
             <label>Maintenance</label>
             <input type="text" id="maintenance" placeholder="Any vehicle issues" oninput="toggleTextBtn()">
@@ -982,6 +1010,8 @@
                 if (s.tips !== undefined) document.getElementById('tips').value = s.tips;
                 if (s.mealExpenses !== undefined) document.getElementById('mealExpenses').value = s.mealExpenses;
                 if (s.groupNotes) document.getElementById('groupNotes').value = s.groupNotes;
+                if (s.contactName) { document.getElementById('contactName').value = s.contactName; toggleReviewBtn(); }
+                if (s.contactPhone) { document.getElementById('contactPhone').value = s.contactPhone; toggleReviewBtn(); }
                 if (s.maintenance) { document.getElementById('maintenance').value = s.maintenance; toggleTextBtn(); }
                 if (s.routeOverride) document.getElementById('routeOverride').value = s.routeOverride;
                 if (s.tourBonusPerDay) document.getElementById('tourBonusPerDay').value = s.tourBonusPerDay;
@@ -1055,6 +1085,8 @@
                 tips: document.getElementById('tips').value,
                 mealExpenses: document.getElementById('mealExpenses').value,
                 groupNotes: document.getElementById('groupNotes').value,
+                contactName: document.getElementById('contactName').value,
+                contactPhone: document.getElementById('contactPhone').value,
                 maintenance: document.getElementById('maintenance').value,
                 routeOverride: document.getElementById('routeOverride').value,
                 tourBonusPerDay: document.getElementById('tourBonusPerDay').value,
@@ -1304,6 +1336,8 @@
             meal_expenses: meals,
             net_earnings: netEarnings,
             group_notes: document.getElementById('groupNotes').value.trim() || null,
+            contact_name: document.getElementById('contactName').value.trim() || null,
+            contact_phone: document.getElementById('contactPhone').value.trim() || null,
             maintenance: document.getElementById('maintenance').value.trim() || null,
             route_override: document.getElementById('routeOverride').value.trim() || null,
             state_lines: getStateLineData(),
@@ -1433,6 +1467,9 @@
         document.getElementById('tips').value = trip.tips || 0;
         document.getElementById('mealExpenses').value = trip.meal_expenses || 0;
         document.getElementById('groupNotes').value = trip.group_notes || '';
+        document.getElementById('contactName').value = trip.contact_name || '';
+        document.getElementById('contactPhone').value = trip.contact_phone || '';
+        toggleReviewBtn();
         document.getElementById('maintenance').value = trip.maintenance || '';
         toggleTextBtn();
         document.getElementById('tourBonusPerDay').value = trip.tour_bonus_per_day || 150;
@@ -1525,6 +1562,9 @@
         document.getElementById('tips').value = '0';
         document.getElementById('mealExpenses').value = '0';
         document.getElementById('groupNotes').value = '';
+        document.getElementById('contactName').value = '';
+        document.getElementById('contactPhone').value = '';
+        document.getElementById('reviewTextBtn').classList.remove('visible');
         document.getElementById('maintenance').value = '';
         document.getElementById('maintenanceTextBtn').classList.remove('visible');
         document.getElementById('tourBonusPerDay').value = '150';
@@ -1571,8 +1611,10 @@
             if (trip.pickup_address) existing.pickup_address = trip.pickup_address;
             if (trip.dropoff_address) existing.dropoff_address = trip.dropoff_address;
             if (trip.group_notes) existing.group_notes = trip.group_notes;
+            if (trip.contact_name) existing.contact_name = trip.contact_name;
+            if (trip.contact_phone) existing.contact_phone = trip.contact_phone;
         } else {
-            book.push({ name: trip.client, pickup_address: trip.pickup_address || '', dropoff_address: trip.dropoff_address || '', group_notes: trip.group_notes || '' });
+            book.push({ name: trip.client, pickup_address: trip.pickup_address || '', dropoff_address: trip.dropoff_address || '', group_notes: trip.group_notes || '', contact_name: trip.contact_name || '', contact_phone: trip.contact_phone || '' });
         }
         saveAddressBook(book);
     }
@@ -1595,6 +1637,9 @@
         if (entry.pickup_address) document.getElementById('pickupAddress').value = entry.pickup_address;
         if (entry.dropoff_address) document.getElementById('dropoffAddress').value = entry.dropoff_address;
         if (entry.group_notes) document.getElementById('groupNotes').value = entry.group_notes;
+        if (entry.contact_name) document.getElementById('contactName').value = entry.contact_name;
+        if (entry.contact_phone) document.getElementById('contactPhone').value = entry.contact_phone;
+        toggleReviewBtn();
         document.getElementById('clientDropdown').style.display = 'none';
         autoSave();
     }
@@ -1633,6 +1678,25 @@
 
     // Save to address book when trip is saved
     const _origSaveTrip = saveTrip;
+
+    // ── Review Request Text ──
+    const GOOGLE_REVIEW_LINK = 'https://www.google.com/search?q=jean%27s+services+reviews&si=AL3DRZHPJ4YuUm1amz1ApnUJGVznQaBtbdlcSPTOF56QShV-nIAEPHiwPDobwe0LIzy2nVWkQx_rl4pzA7TwwFp9gE9i8TfW3MvYwO2u8kXpavE60rQAn2Z_38fTcvCpuo8m78eqTwIe2Q6a9X6n5reMKnPdM3OYU8BuUpjfXbDQkq8h30UspP4%3D';
+
+    function toggleReviewBtn() {
+        const name = document.getElementById('contactName').value.trim();
+        const phone = document.getElementById('contactPhone').value.trim();
+        const btn = document.getElementById('reviewTextBtn');
+        if (name && phone) btn.classList.add('visible'); else btn.classList.remove('visible');
+    }
+
+    function sendReviewRequest() {
+        const name = document.getElementById('contactName').value.trim();
+        const phone = document.getElementById('contactPhone').value.trim().replace(/\D/g,'');
+        const client = document.getElementById('client').value.trim();
+        if (!name || !phone) { showToast('⚠️ Enter contact name and phone first'); return; }
+        const msg = `Hi ${name}, this is J.R. with Jean's Bus Service. It was truly a pleasure serving you today! If we met or exceeded your expectations, we'd be so grateful if you'd take a moment to leave us a 5-star Google review — it makes a huge difference for our small family business. Just tap the link, then tap the 5th star to get started: ${GOOGLE_REVIEW_LINK}. Thank you so much!`;
+        window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+    }
 
     // ── Maintenance Text Button ──
     function toggleTextBtn() {
@@ -1988,6 +2052,93 @@ Return ONLY valid JSON, no markdown, no explanation:
         const subject = `Trip Log — Charter #${driveNum} — ${client}`;
         const body = `Hi JoLynn,\n\nPlease find the trip log for the following:\n\nCharter #: ${driveNum}\nClient: ${client}\nBus #: ${vehicle}\nDate: ${startDate}\n\nThank you,\nJ.R. Grimaldo`;
         window.location.href = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    // ── Scan Charter Form ──
+    async function processCharterForm(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const status = document.getElementById('scanStatus');
+        status.style.display = 'block';
+        status.style.color = 'var(--text-dim)';
+        status.textContent = '📷 Reading charter form...';
+
+        try {
+            // Convert image to base64
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const mediaType = file.type || 'image/jpeg';
+
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 500,
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'image',
+                                source: { type: 'base64', media_type: mediaType, data: base64 }
+                            },
+                            {
+                                type: 'text',
+                                text: `This is a charter order form from Jean's Bus Service. Extract exactly:
+1. Charter Order number (just the number, e.g. 19548)
+2. Client/Group name (the group or organization name, e.g. "Core Soccer")
+3. First pickup address (the first pickup location in the itinerary, including city and state)
+4. Driver name if visible
+5. Bus number if visible
+
+Respond ONLY with valid JSON, no markdown:
+{"charter_number": "...", "client": "...", "pickup_address": "...", "driver": "...", "bus_number": "..."}`
+                            }
+                        ]
+                    }]
+                })
+            });
+
+            const data = await response.json();
+            const text = data.content[0].text.replace(/```json|```/g, '').trim();
+            const result = JSON.parse(text);
+
+            // Fill fields
+            let filled = [];
+            if (result.charter_number) {
+                document.getElementById('driveNumber').value = result.charter_number;
+                filled.push('Charter #');
+            }
+            if (result.client) {
+                document.getElementById('client').value = result.client;
+                autocompleteClient(result.client);
+                filled.push('Client');
+            }
+            if (result.pickup_address) {
+                document.getElementById('pickupAddress').value = result.pickup_address;
+                filled.push('Pickup Address');
+            }
+            if (result.bus_number) {
+                document.getElementById('vehicle').value = result.bus_number;
+                filled.push('Bus #');
+            }
+
+            status.style.color = 'var(--tour-green)';
+            status.textContent = `✅ Filled: ${filled.join(', ')}`;
+            autoSave();
+            input.value = ''; // reset so same photo can be re-scanned if needed
+
+        } catch(e) {
+            status.style.color = 'var(--danger)';
+            status.textContent = '❌ Could not read form — try a clearer photo';
+            console.error(e);
+        }
     }
 
     // ── Toast ──
