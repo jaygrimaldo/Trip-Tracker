@@ -1689,12 +1689,22 @@
         if (name && phone) btn.classList.add('visible'); else btn.classList.remove('visible');
     }
 
-    function sendReviewRequest() {
+    async function sendReviewRequest() {
         const name = document.getElementById('contactName').value.trim();
         const phone = document.getElementById('contactPhone').value.trim().replace(/\D/g,'');
-        const client = document.getElementById('client').value.trim();
         if (!name || !phone) { showToast('⚠️ Enter contact name and phone first'); return; }
-        const msg = `Hi ${name}, this is J.R. with Jean's Bus Service. It was truly a pleasure serving you today! If we met or exceeded your expectations, we'd be so grateful if you'd take a moment to leave us a 5-star Google review — it makes a huge difference for our small family business. Just tap the link, then tap the 5th star to get started: ${GOOGLE_REVIEW_LINK}. Thank you so much!`;
+
+        showToast('⏳ Preparing message...');
+
+        let reviewLink = GOOGLE_REVIEW_LINK;
+        try {
+            const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(GOOGLE_REVIEW_LINK)}`);
+            if (res.ok) reviewLink = await res.text();
+        } catch(e) {
+            // Fall back to full link if shortening fails
+        }
+
+        const msg = `Hi ${name}, this is J.R. with Jean's Bus Service. It was truly a pleasure serving you today! If we met or exceeded your expectations, we'd be so grateful if you'd take a moment to leave us a 5-star Google review — it makes a huge difference for our small family business. Just tap the link, then tap the 5th star to get started: ${reviewLink}. Thank you so much!`;
         window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
     }
 
