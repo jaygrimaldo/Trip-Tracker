@@ -706,7 +706,7 @@
                 <span>Route</span>
                 <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400;">Auto-filled — edit if GPS differs</span>
             </label>
-            <input type="text" id="routeOverride" placeholder="e.g. I-85 S" autocomplete="off">
+            <input type="text" id="routeOverride" placeholder="e.g. I-85 S" autocomplete="off" oninput="onRouteEdit()">
         </div>
         <button type="button" class="action-btn visible" style="margin-top:10px; border-color:#3b82f6; color:#3b82f6;" onclick="showClaudeRoute()" id="showRouteBtn">🗺️ Show Claude's Route</button>
         <div id="claudeRouteStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
@@ -1783,6 +1783,17 @@
         window.location.href = `sms:8644447067,8644447068?body=${encodeURIComponent(msg)}`;
     }
 
+    function onRouteEdit() {
+        // Just warn that state lines may need recalculating — don't clear existing data
+        if (stateLineData.length > 0) {
+            const status = document.getElementById('stateLinesStatus');
+            status.style.display = 'block';
+            status.style.color = 'var(--warning)';
+            status.textContent = '⚠️ Route changed — tap Calculate State Lines again';
+        }
+        autoSave();
+    }
+
     // ── Show Claude's Route ──
     async function showClaudeRoute() {
         const destination = document.getElementById('dropoffAddress').value.trim();
@@ -1799,7 +1810,7 @@
         const prompt = `A 56-passenger charter bus is driving from Greenville, SC (3 Cauley Dr) to ${destination}.
 What is the best direct highway route? List only the main highways in order.
 Return ONLY valid JSON, no markdown:
-{"route": "I-385 N, I-85 S", "note": "one sentence about the route"}`;
+{"route": "highway names in order", "note": "one sentence about the route"}`;
 
         try {
             const response = await fetch('https://bus-tracker-proxy.jaygrimaldo.workers.dev', {
@@ -1858,19 +1869,19 @@ Return ONLY valid JSON, no markdown:
 
         // Ask Claude ONLY for the route structure - states, highways, and approximate mile percentages
         const prompt = `A professional bus driver is driving from Greenville, SC (3 Cauley Dr) to ${destination}.
-${routeOverride ? `Route used: ${routeOverride}` : 'Use the most direct highway route.'}
+${routeOverride ? `IMPORTANT: The driver confirms the exact route taken is: ${routeOverride}. Use ONLY these highways — do not add or substitute any others.` : 'Use the most direct highway route for a 56-passenger bus.'}
 
-List ONLY the states actually crossed on this route (not adjacent states, not states on alternate routes).
-For each state section provide the approximate percentage of total one-way trip miles spent in that state.
-Also provide the full suggested route as a comma-separated list of highways.
+List ONLY the states actually crossed on this route.
+For each state section use ONLY the highways specified above.
+Provide the approximate percentage of total one-way trip miles in each state.
 
 Return ONLY valid JSON, no markdown:
 {
   "states": [
-    {"state": "SC", "highways": "I-385 N, I-85 S", "pct": 35},
-    {"state": "GA", "highways": "I-85 S", "pct": 65}
+    {"state": "SC", "highways": "exact highway names from route", "pct": 35},
+    {"state": "GA", "highways": "exact highway names from route", "pct": 65}
   ],
-  "suggested_route": "I-385 N, I-85 S",
+  "suggested_route": "highway list",
   "route_summary": "one line"
 }`;
 
@@ -1989,13 +2000,13 @@ Return ONLY valid JSON, no markdown:
         if (!d.client) { showToast('⚠️ Enter a client name first'); return; }
 
         // Build mileage log preview
-        let mlRows = d.stateLines.map(row => `
+        let mlRows = stateLineData.map(row => `
             <tr>
-                <td>${row.date}</td><td>${row.state}</td>
-                <td>${row.highways}</td><td>${row.odometer}</td>
-                <td style="text-align:center; font-weight:600;">${row.miles}</td>
+                <td>${row.date || ''}</td><td>${row.state || ''}</td>
+                <td>${row.highways || ''}</td><td>${row.odometer || ''}</td>
+                <td style="text-align:center; font-weight:600;">${row.miles || ''}</td>
             </tr>`).join('');
-        if (!mlRows) mlRows = '<tr><td colspan="5" style="text-align:center; color:#999; padding:12px;">No state lines entered yet</td></tr>';
+        if (!mlRows) mlRows = '<tr><td colspan="5" style="text-align:center; color:#999; padding:12px;">⚠️ Tap Calculate State Lines first</td></tr>';
 
         document.getElementById('previewMileage').innerHTML = `
             <div class="preview-header">
