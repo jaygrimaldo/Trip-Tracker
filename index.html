@@ -2257,6 +2257,35 @@ Respond ONLY with valid JSON, no markdown:
         reader.readAsText(file);
     }
 
+    // ── Auto-advance to next field on Done/Return ──
+    const fieldOrder = [
+        'driveNumber','vehicle','client','pickupAddress','dropoffAddress',
+        'startDate','endDate',
+        'beginMiles','odometerAtPickup','odometerDropoff',
+        'odometerPickup','odometerAtReturnDropoff','endMiles'
+    ];
+
+    function advanceToNext(currentId) {
+        const idx = fieldOrder.indexOf(currentId);
+        if (idx !== -1 && idx < fieldOrder.length - 1) {
+            const next = document.getElementById(fieldOrder[idx + 1]);
+            if (next) { next.focus(); next.select && next.select(); }
+        }
+    }
+
+    // Wire keydown Enter/Done to advance
+    fieldOrder.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Next') {
+                    e.preventDefault();
+                    advanceToNext(id);
+                }
+            });
+        }
+    });
+
     // ── Toast ──
     function showToast(msg) {
         const toast = document.getElementById('toast');
