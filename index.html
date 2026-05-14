@@ -909,6 +909,9 @@
 
     <button type="button" class="action-btn email-btn visible" style="max-width:500px; margin:0 auto 8px; display:block;" onclick="emailToJoLynn()">📧 Email Forms to JoLynn</button>
 
+    <input type="file" id="addressBookInput" accept=".json" style="display:none;" onchange="restoreAddressBook(this)">
+    <button type="button" class="action-btn visible" style="max-width:500px; margin:0 auto 8px; display:block; border-color:var(--border);" onclick="document.getElementById('addressBookInput').click()">📋 Restore Address Book</button>
+
     <a href="#" class="reset-link" onclick="resetForm(); return false;">Reset Form</a>
 
 </div>
@@ -1631,6 +1634,16 @@
 
     function saveAddressBook(book) {
         try { localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(book)); } catch(e) {}
+        // Auto-download address book for backup
+        try {
+            const blob = new Blob([JSON.stringify(book, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'address_book.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch(e) {}
     }
 
     function addToAddressBook(trip) {
@@ -2205,6 +2218,23 @@ Respond ONLY with valid JSON, no markdown:
             status.textContent = '❌ Could not read form — try a clearer photo';
             console.error(e);
         }
+    }
+
+    function restoreAddressBook(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const book = JSON.parse(e.target.result);
+                localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(book));
+                showToast(`✅ Address book restored — ${book.length} client${book.length !== 1 ? 's' : ''}`);
+            } catch(err) {
+                showToast('❌ Invalid address book file');
+            }
+            input.value = '';
+        };
+        reader.readAsText(file);
     }
 
     // ── Toast ──
