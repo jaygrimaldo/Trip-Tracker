@@ -1774,30 +1774,52 @@
         status.style.display = 'block';
         status.textContent = 'Contacting Claude...';
 
-        const origin = '3 Cauley Dr, Greenville, SC 29609';
-        const prompt = `You are a bus route calculator for J.R. Grimaldo, a professional bus driver based in Greenville, SC.
+        const odoAtPickup = parseFloat(document.getElementById('odometerAtPickup').value) || null;
+        const odoDropoff = parseFloat(document.getElementById('odometerDropoff').value) || null;
+        const odoPickup = parseFloat(document.getElementById('odometerPickup').value) || null;
+        const odoReturnDropoff = parseFloat(document.getElementById('odometerAtReturnDropoff').value) || null;
+        const endOdo = parseFloat(document.getElementById('endMiles').value) || null;
 
-Bus lot (origin/end): ${origin}
-First pickup: ${pickup || 'same as origin area'}
-Destination (dropoff): ${destination}
-Beginning odometer at lot: ${beginOdo}
-${routeOverride ? `Route to use (GPS/agreed route): ${routeOverride}` : 'Use the best highway route for a 56-passenger charter bus. Avoid low bridges and restricted roads.'}
-${startDate ? `Begin date: ${startDate}` : ''}
-${endDate ? `End date: ${endDate}` : ''}
+        const outboundMiles = odoDropoff && beginOdo ? odoDropoff - beginOdo : null;
+        const returnMiles = endOdo && odoPickup ? endOdo - odoPickup : null;
 
-Calculate BOTH outbound and return state line crossings. For each row provide estimated odometer at the END of that state section based on beginning odometer of ${beginOdo}.
+        const prompt = `You are calculating state line crossings for a professional bus driver's mileage log.
+
+TRIP DETAILS:
+- Bus lot (start/end): 3 Cauley Dr, Greenville, SC 29609
+- First pickup: ${pickup || 'near Greenville, SC'}
+- Dropoff destination: ${destination}
+- Begin odometer (at lot): ${beginOdo}
+${odoAtPickup ? `- Odometer at first pickup: ${odoAtPickup}` : ''}
+${odoDropoff ? `- Odometer at dropoff (destination): ${odoDropoff}` : ''}
+${odoPickup ? `- Odometer leaving destination (return): ${odoPickup}` : ''}
+${odoReturnDropoff ? `- Odometer at return dropoff: ${odoReturnDropoff}` : ''}
+${endOdo ? `- End odometer (back at lot): ${endOdo}` : ''}
+${outboundMiles ? `- Total outbound miles: ${outboundMiles}` : ''}
+${returnMiles ? `- Total return miles: ${returnMiles}` : ''}
+${routeOverride ? `- Route used: ${routeOverride}` : ''}
+- Date: ${startDate || 'today'}
+
+INSTRUCTIONS:
+1. Determine the actual states the bus travels through between the lot and destination geographically. Do NOT include states that are not actually on the route.
+2. For each state section, calculate the odometer reading at the state line crossing using the actual odometer readings provided above and the known geographic distances.
+3. Include outbound legs AND return legs.
+4. If actual odometer readings are provided above, use them to calculate proportional state line positions based on real highway distances.
+5. Keep state labels simple: use the state abbreviation for travel within a state (e.g. "SC", "GA") or "SC-GA" for a crossing.
 
 Return ONLY valid JSON, no markdown, no explanation:
 {
   "outbound": [
-    {"date": "${startDate || ''}", "state": "SC-NC", "highways": "I-85 N", "odometer": 0, "miles": 0},
-    ...
+    {"date": "${startDate || ''}", "state": "SC", "highways": "highway names", "odometer": 0, "miles": 0},
+    {"date": "${startDate || ''}", "state": "SC-GA", "highways": "highway names", "odometer": 0, "miles": 0},
+    {"date": "${startDate || ''}", "state": "GA", "highways": "highway names", "odometer": 0, "miles": 0}
   ],
   "return": [
-    {"date": "${endDate || startDate || ''}", "state": "AL-TN", "highways": "US-72 E", "odometer": 0, "miles": 0},
-    ...
+    {"date": "${endDate || startDate || ''}", "state": "GA", "highways": "highway names", "odometer": 0, "miles": 0},
+    {"date": "${endDate || startDate || ''}", "state": "GA-SC", "highways": "highway names", "odometer": 0, "miles": 0},
+    {"date": "${endDate || startDate || ''}", "state": "SC", "highways": "highway names", "odometer": 0, "miles": 0}
   ],
-  "route_summary": "brief description of route"
+  "route_summary": "brief one-line description"
 }`;
 
         try {
@@ -1940,8 +1962,9 @@ Return ONLY valid JSON, no markdown, no explanation:
     }
 
     function downloadForms() {
-        if (!window.jspdf) { showToast('⚠️ PDF library not loaded yet, try again'); return; }
-        const { jsPDF } = window.jspdf;
+        const jsPDFLib = window.jspdf || window.jsPDF;
+        if (!jsPDFLib) { showToast('⚠️ PDF library not loaded yet, try again'); return; }
+        const { jsPDF } = jsPDFLib.jsPDF ? jsPDFLib : window.jspdf || { jsPDF: jsPDFLib };
         const d = getFormData();
 
         // ── Mileage Log PDF ──
@@ -2092,8 +2115,9 @@ Return ONLY valid JSON, no markdown, no explanation:
         const startDate = document.getElementById('startDate').value || '—';
         const vehicle = document.getElementById('vehicle').value.trim() || '—';
         const subject = `Trip Log — Charter #${driveNum} — ${client}`;
-        const body = `Hi JoLynn,\n\nPlease find the trip log for the following:\n\nCharter #: ${driveNum}\nClient: ${client}\nBus #: ${vehicle}\nDate: ${startDate}\n\nThank you,\nJ.R. Grimaldo`;
-        window.location.href = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const body = `Hi JoLynn,\n\nPlease find the trip log for:\n\nCharter #: ${driveNum}\nClient: ${client}\nBus #: ${vehicle}\nDate: ${startDate}\n\nThank you,\nJ.R. Grimaldo`;
+        const mailtoLink = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(mailtoLink, '_blank');
     }
 
     // ── Scan Charter Form ──
