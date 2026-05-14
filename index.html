@@ -679,11 +679,11 @@
         <div class="field-row" style="margin-bottom: 14px;">
             <div class="field">
                 <label>Drive #</label>
-                <input type="text" id="driveNumber" inputmode="numeric" placeholder="19396">
+                <input type="text" id="driveNumber" enterkeyhint="next" inputmode="numeric" placeholder="19396">
             </div>
             <div class="field">
                 <label>Bus #</label>
-                <input type="text" id="vehicle" inputmode="numeric" placeholder="848">
+                <input type="text" id="vehicle" enterkeyhint="next" inputmode="numeric" placeholder="848">
             </div>
         </div>
         <div class="field ac-wrapper">
@@ -741,31 +741,31 @@
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
                 <label>Begin Miles (Lot)</label>
-                <input type="number" id="beginMiles" inputmode="decimal" placeholder="355949" step="0.1" oninput="updateMiles()">
+                <input type="number" id="beginMiles" enterkeyhint="next" inputmode="decimal" placeholder="355949" step="0.1" oninput="updateMiles()">
             </div>
             <div class="field">
                 <label>Arrive First Pickup</label>
-                <input type="number" id="odometerAtPickup" inputmode="decimal" placeholder="356136" oninput="updateMileageSummary(); autoSave();">
+                <input type="number" id="odometerAtPickup" enterkeyhint="next" inputmode="decimal" placeholder="356136" oninput="updateMileageSummary(); autoSave();">
             </div>
         </div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
                 <label>Arrive Dropoff</label>
-                <input type="number" id="odometerDropoff" inputmode="decimal" placeholder="356643" oninput="updateMileageSummary(); autoSave();">
+                <input type="number" id="odometerDropoff" enterkeyhint="next" inputmode="decimal" placeholder="356643" oninput="updateMileageSummary(); autoSave();">
             </div>
             <div class="field">
                 <label>Leave Dropoff (Return)</label>
-                <input type="number" id="odometerPickup" inputmode="decimal" placeholder="356660" oninput="updateMileageSummary(); autoSave();">
+                <input type="number" id="odometerPickup" enterkeyhint="next" inputmode="decimal" placeholder="356660" oninput="updateMileageSummary(); autoSave();">
             </div>
         </div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
                 <label>Arrive Return Dropoff</label>
-                <input type="number" id="odometerAtReturnDropoff" inputmode="decimal" placeholder="357147" oninput="updateMileageSummary(); autoSave();">
+                <input type="number" id="odometerAtReturnDropoff" enterkeyhint="next" inputmode="decimal" placeholder="357147" oninput="updateMileageSummary(); autoSave();">
             </div>
             <div class="field">
                 <label>End Miles (Lot)</label>
-                <input type="number" id="endMiles" inputmode="decimal" placeholder="357336" step="0.1" oninput="updateMiles()">
+                <input type="number" id="endMiles" enterkeyhint="next" inputmode="decimal" placeholder="357336" step="0.1" oninput="updateMiles()">
             </div>
         </div>
         <div style="margin-top:14px; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px;" id="mileageSummary">
@@ -2273,17 +2273,21 @@ Respond ONLY with valid JSON, no markdown:
         }
     }
 
-    // Wire keydown Enter/Done to advance
+    // Wire both keydown AND input events for iOS numeric pad compatibility
     fieldOrder.forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Next') {
-                    e.preventDefault();
-                    advanceToNext(id);
-                }
-            });
-        }
+        if (!el) return;
+
+        // Standard keyboard Enter key
+        el.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === 'Go' || e.key === 'Next') {
+                e.preventDefault();
+                advanceToNext(id);
+            }
+        });
+
+        // iOS numeric pad — add 'next' button hint via enterkeyhint
+        el.setAttribute('enterkeyhint', 'next');
     });
 
     // ── Toast ──
