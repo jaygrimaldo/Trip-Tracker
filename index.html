@@ -703,13 +703,13 @@
         </div>
         <div class="field" style="margin-top: 14px;">
             <label style="display:flex; justify-content:space-between;">
-                <span>Route Override</span>
-                <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400;">Leave blank if GPS &amp; Claude agree</span>
+                <span>Route</span>
+                <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400;">Auto-filled — edit if GPS differs</span>
             </label>
-            <input type="text" id="routeOverride" placeholder="e.g. I-77 N, I-81 S, I-40 W, I-75 S, US-72 W" autocomplete="off">
+            <input type="text" id="routeOverride" placeholder="e.g. I-85 S" autocomplete="off">
         </div>
-        <button type="button" class="generate-btn" style="margin-top:12px; font-size:0.9rem; padding:12px;" onclick="calculateStateLines()" id="calcBtn">🔄 Calculate State Lines</button>
-        <div id="stateLinesStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
+        <button type="button" class="action-btn visible" style="margin-top:10px; border-color:#3b82f6; color:#3b82f6;" onclick="showClaudeRoute()" id="showRouteBtn">🗺️ Show Claude's Route</button>
+        <div id="claudeRouteStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
                 <label>Trip Type</label>
@@ -779,6 +779,8 @@
                 <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:6px; margin-top:2px;"><span style="font-weight:700;">Total Miles</span><span id="sumTotal" style="font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--accent);">—</span></div>
             </div>
         </div>
+        <button type="button" class="generate-btn" style="margin-top:12px; font-size:0.9rem; padding:12px;" onclick="calculateStateLines()" id="calcBtn">🔄 Calculate State Lines</button>
+        <div id="stateLinesStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
     </div>
 
     <!-- Daily Hours -->
@@ -1781,6 +1783,54 @@
         window.location.href = `sms:8644447067,8644447068?body=${encodeURIComponent(msg)}`;
     }
 
+    // ── Show Claude's Route ──
+    async function showClaudeRoute() {
+        const destination = document.getElementById('dropoffAddress').value.trim();
+        const pickup = document.getElementById('pickupAddress').value.trim();
+        if (!destination) { showToast('⚠️ Enter dropoff address first'); return; }
+
+        const btn = document.getElementById('showRouteBtn');
+        const status = document.getElementById('claudeRouteStatus');
+        btn.textContent = '⏳ Asking Claude...';
+        btn.disabled = true;
+        status.style.display = 'block';
+        status.textContent = 'Getting route suggestion...';
+
+        const prompt = `A 56-passenger charter bus is driving from Greenville, SC (3 Cauley Dr) to ${destination}.
+What is the best direct highway route? List only the main highways in order.
+Return ONLY valid JSON, no markdown:
+{"route": "I-385 N, I-85 S", "note": "one sentence about the route"}`;
+
+        try {
+            const response = await fetch('https://bus-tracker-proxy.jaygrimaldo.workers.dev', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 200,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+            const data = await response.json();
+            const text = data.content[0].text.replace(/```json|```/g, '').trim();
+            const result = JSON.parse(text);
+
+            // Auto-fill the route field if empty
+            if (result.route) {
+                document.getElementById('routeOverride').value = result.route;
+            }
+            status.style.color = 'var(--tour-green)';
+            status.textContent = `✅ ${result.route} — ${result.note || ''}`;
+            showToast('✅ Route shown — compare with your GPS');
+        } catch(e) {
+            status.style.color = 'var(--danger)';
+            status.textContent = '❌ Error getting route';
+        } finally {
+            btn.textContent = '🗺️ Show Claude\'s Route';
+            btn.disabled = false;
+        }
+    }
+
     // ── Calculate State Lines via Claude API ──
     async function calculateStateLines() {
         const destination = document.getElementById('dropoffAddress').value.trim();
@@ -1806,45 +1856,22 @@
         const odoReturnDropoff = parseFloat(document.getElementById('odometerAtReturnDropoff').value) || null;
         const endOdo = parseFloat(document.getElementById('endMiles').value) || null;
 
-        const outboundMiles = odoDropoff && beginOdo ? odoDropoff - beginOdo : null;
-        const returnMiles = endOdo && odoPickup ? endOdo - odoPickup : null;
+        // Ask Claude ONLY for the route structure - states, highways, and approximate mile percentages
+        const prompt = `A professional bus driver is driving from Greenville, SC (3 Cauley Dr) to ${destination}.
+${routeOverride ? `Route used: ${routeOverride}` : 'Use the most direct highway route.'}
 
-        const prompt = `You are calculating state line crossings for a professional bus driver's mileage log. Be precise and use the actual odometer readings provided.
-
-ACTUAL ODOMETER READINGS FROM THIS TRIP:
-- Begin at lot: ${beginOdo}
-${odoAtPickup ? `- Arrive first pickup (${pickup || 'pickup location'}): ${odoAtPickup}` : ''}
-${odoDropoff ? `- Arrive destination dropoff (${destination}): ${odoDropoff}` : ''}
-${odoPickup ? `- Leave destination for return: ${odoPickup}` : ''}
-${odoReturnDropoff ? `- Arrive return dropoff location: ${odoReturnDropoff}` : ''}
-${endOdo ? `- Back at lot: ${endOdo}` : ''}
-
-ROUTE:
-- Origin: 3 Cauley Dr, Greenville, SC
-- First pickup: ${pickup || 'Greenville, SC area'}  
-- Destination: ${destination}
-${routeOverride ? `- Highways used: ${routeOverride}` : '- Use the direct highway route between these points'}
-- Date: ${startDate || ''}
-- Return date: ${endDate || startDate || ''}
-
-RULES:
-1. Only include states that are ACTUALLY on the direct route between Greenville SC and ${destination}. Do not add states that are not geographically on this route.
-2. Use the actual odometer readings above to calculate exact state line crossing odometers by proportional distance.
-3. Each row = one continuous section of travel within a state. Do not split a state into multiple rows unless there is a reason (like local miles at destination).
-4. The "miles" field = odometer of this row minus odometer of previous row.
-5. State format: use "SC" for travel within SC, "SC-GA" only if that crossing is the row's key event.
+List ONLY the states actually crossed on this route (not adjacent states, not states on alternate routes).
+For each state section provide the approximate percentage of total one-way trip miles spent in that state.
+Also provide the full suggested route as a comma-separated list of highways.
 
 Return ONLY valid JSON, no markdown:
 {
-  "outbound": [
-    {"date": "${startDate || ''}", "state": "SC", "highways": "I-85 S", "odometer": ${odoAtPickup || beginOdo}, "miles": ${odoAtPickup ? odoAtPickup - beginOdo : 0}},
-    {"date": "${startDate || ''}", "state": "GA", "highways": "I-85 S", "odometer": ${odoDropoff || 0}, "miles": 0}
+  "states": [
+    {"state": "SC", "highways": "I-385 N, I-85 S", "pct": 35},
+    {"state": "GA", "highways": "I-85 S", "pct": 65}
   ],
-  "return": [
-    {"date": "${endDate || startDate || ''}", "state": "GA", "highways": "I-85 N", "odometer": ${odoReturnDropoff || odoPickup || 0}, "miles": 0},
-    {"date": "${endDate || startDate || ''}", "state": "SC", "highways": "I-85 N", "odometer": ${endOdo || 0}, "miles": 0}
-  ],
-  "route_summary": "one line description"
+  "suggested_route": "I-385 N, I-85 S",
+  "route_summary": "one line"
 }`;
 
         try {
@@ -1853,7 +1880,7 @@ Return ONLY valid JSON, no markdown:
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: 'claude-sonnet-4-20250514',
-                    max_tokens: 1000,
+                    max_tokens: 500,
                     messages: [{ role: 'user', content: prompt }]
                 })
             });
@@ -1862,13 +1889,57 @@ Return ONLY valid JSON, no markdown:
             if (!data.content || !data.content[0]) throw new Error('No response');
             const text = data.content[0].text.replace(/```json|```/g, '').trim();
             const result = JSON.parse(text);
+            const states = result.states || [];
 
-            stateLineData = [
-                ...(result.outbound || []),
-                ...(result.return || [])
-            ];
+            // Now calculate odometers mathematically from actual readings
+            const outboundTotal = odoDropoff && beginOdo ? odoDropoff - beginOdo : 0;
+            const returnTotal = endOdo && odoPickup ? endOdo - odoPickup : 0;
 
-            status.textContent = `✅ ${stateLineData.length} state lines calculated — ${result.route_summary || ''}`;
+            const outbound = [];
+            let runningOdo = beginOdo;
+            states.forEach((s, i) => {
+                const miles = Math.round(outboundTotal * s.pct / 100);
+                runningOdo += miles;
+                outbound.push({
+                    date: startDate || '',
+                    state: s.state,
+                    highways: s.highways,
+                    odometer: i === states.length - 1 ? odoDropoff : runningOdo,
+                    miles: i === states.length - 1 ? Math.round(odoDropoff - (runningOdo - miles)) : miles
+                });
+            });
+
+            // Local miles at destination
+            const localMiles = odoPickup && odoDropoff ? odoPickup - odoDropoff : 0;
+            if (localMiles > 0) {
+                outbound.push({
+                    date: startDate || '',
+                    state: states[states.length - 1]?.state || 'GA',
+                    highways: 'Local',
+                    odometer: odoPickup,
+                    miles: localMiles
+                });
+            }
+
+            // Return trip - reverse the states
+            const returnStates = [...states].reverse();
+            const ret = [];
+            runningOdo = odoPickup || beginOdo;
+            returnStates.forEach((s, i) => {
+                const miles = Math.round(returnTotal * s.pct / 100);
+                runningOdo += miles;
+                ret.push({
+                    date: endDate || startDate || '',
+                    state: i === 0 ? s.state : s.state,
+                    highways: s.highways.replace(' S', ' N').replace(' W', ' E'),
+                    odometer: i === returnStates.length - 1 ? endOdo : runningOdo,
+                    miles: i === returnStates.length - 1 ? Math.round(endOdo - (runningOdo - miles)) : miles
+                });
+            });
+
+            stateLineData = [...outbound, ...ret];
+
+            status.textContent = `✅ ${stateLineData.length} rows calculated — ${result.route_summary || ''}`;
             status.style.color = 'var(--tour-green)';
             showToast(`✅ State lines ready!`);
             autoSave();
