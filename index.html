@@ -1365,11 +1365,30 @@
         // Save to address book
         if (trip.client) addToAddressBook(trip);
 
+        // Remove existing trip with same drive number if present
+        if (trip.drive_number) {
+            const idx = tripQueue.findIndex(t => t.drive_number === trip.drive_number);
+            if (idx !== -1) tripQueue.splice(idx, 1);
+        }
+
         tripQueue.push(trip);
         try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
         renderQueue();
-        showToast(`✅ Saved! (${tripQueue.length} trip${tripQueue.length > 1 ? 's' : ''} queued)`);
-        resetForm(true); // silent reset
+
+        // Auto-export to iCloud — filename based on drive number
+        const filename = trip.drive_number
+            ? `trip_${trip.drive_number}.json`
+            : `trip_${Date.now()}.json`;
+        const blob = new Blob([JSON.stringify({ trips: [trip] }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showToast(`✅ Saved & exported as ${filename}`);
+        resetForm(true);
     }
 
     // ── Export All (queue + current if filled) ──
