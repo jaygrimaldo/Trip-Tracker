@@ -1796,43 +1796,42 @@
         const outboundMiles = odoDropoff && beginOdo ? odoDropoff - beginOdo : null;
         const returnMiles = endOdo && odoPickup ? endOdo - odoPickup : null;
 
-        const prompt = `You are calculating state line crossings for a professional bus driver's mileage log.
+        const prompt = `You are calculating state line crossings for a professional bus driver's mileage log. Be precise and use the actual odometer readings provided.
 
-TRIP DETAILS:
-- Bus lot (start/end): 3 Cauley Dr, Greenville, SC 29609
-- First pickup: ${pickup || 'near Greenville, SC'}
-- Dropoff destination: ${destination}
-- Begin odometer (at lot): ${beginOdo}
-${odoAtPickup ? `- Odometer at first pickup: ${odoAtPickup}` : ''}
-${odoDropoff ? `- Odometer at dropoff (destination): ${odoDropoff}` : ''}
-${odoPickup ? `- Odometer leaving destination (return): ${odoPickup}` : ''}
-${odoReturnDropoff ? `- Odometer at return dropoff: ${odoReturnDropoff}` : ''}
-${endOdo ? `- End odometer (back at lot): ${endOdo}` : ''}
-${outboundMiles ? `- Total outbound miles: ${outboundMiles}` : ''}
-${returnMiles ? `- Total return miles: ${returnMiles}` : ''}
-${routeOverride ? `- Route used: ${routeOverride}` : ''}
-- Date: ${startDate || 'today'}
+ACTUAL ODOMETER READINGS FROM THIS TRIP:
+- Begin at lot: ${beginOdo}
+${odoAtPickup ? `- Arrive first pickup (${pickup || 'pickup location'}): ${odoAtPickup}` : ''}
+${odoDropoff ? `- Arrive destination dropoff (${destination}): ${odoDropoff}` : ''}
+${odoPickup ? `- Leave destination for return: ${odoPickup}` : ''}
+${odoReturnDropoff ? `- Arrive return dropoff location: ${odoReturnDropoff}` : ''}
+${endOdo ? `- Back at lot: ${endOdo}` : ''}
 
-INSTRUCTIONS:
-1. Determine the actual states the bus travels through between the lot and destination geographically. Do NOT include states that are not actually on the route.
-2. For each state section, calculate the odometer reading at the state line crossing using the actual odometer readings provided above and the known geographic distances.
-3. Include outbound legs AND return legs.
-4. If actual odometer readings are provided above, use them to calculate proportional state line positions based on real highway distances.
-5. Keep state labels simple: use the state abbreviation for travel within a state (e.g. "SC", "GA") or "SC-GA" for a crossing.
+ROUTE:
+- Origin: 3 Cauley Dr, Greenville, SC
+- First pickup: ${pickup || 'Greenville, SC area'}  
+- Destination: ${destination}
+${routeOverride ? `- Highways used: ${routeOverride}` : '- Use the direct highway route between these points'}
+- Date: ${startDate || ''}
+- Return date: ${endDate || startDate || ''}
 
-Return ONLY valid JSON, no markdown, no explanation:
+RULES:
+1. Only include states that are ACTUALLY on the direct route between Greenville SC and ${destination}. Do not add states that are not geographically on this route.
+2. Use the actual odometer readings above to calculate exact state line crossing odometers by proportional distance.
+3. Each row = one continuous section of travel within a state. Do not split a state into multiple rows unless there is a reason (like local miles at destination).
+4. The "miles" field = odometer of this row minus odometer of previous row.
+5. State format: use "SC" for travel within SC, "SC-GA" only if that crossing is the row's key event.
+
+Return ONLY valid JSON, no markdown:
 {
   "outbound": [
-    {"date": "${startDate || ''}", "state": "SC", "highways": "highway names", "odometer": 0, "miles": 0},
-    {"date": "${startDate || ''}", "state": "SC-GA", "highways": "highway names", "odometer": 0, "miles": 0},
-    {"date": "${startDate || ''}", "state": "GA", "highways": "highway names", "odometer": 0, "miles": 0}
+    {"date": "${startDate || ''}", "state": "SC", "highways": "I-85 S", "odometer": ${odoAtPickup || beginOdo}, "miles": ${odoAtPickup ? odoAtPickup - beginOdo : 0}},
+    {"date": "${startDate || ''}", "state": "GA", "highways": "I-85 S", "odometer": ${odoDropoff || 0}, "miles": 0}
   ],
   "return": [
-    {"date": "${endDate || startDate || ''}", "state": "GA", "highways": "highway names", "odometer": 0, "miles": 0},
-    {"date": "${endDate || startDate || ''}", "state": "GA-SC", "highways": "highway names", "odometer": 0, "miles": 0},
-    {"date": "${endDate || startDate || ''}", "state": "SC", "highways": "highway names", "odometer": 0, "miles": 0}
+    {"date": "${endDate || startDate || ''}", "state": "GA", "highways": "I-85 N", "odometer": ${odoReturnDropoff || odoPickup || 0}, "miles": 0},
+    {"date": "${endDate || startDate || ''}", "state": "SC", "highways": "I-85 N", "odometer": ${endOdo || 0}, "miles": 0}
   ],
-  "route_summary": "brief one-line description"
+  "route_summary": "one line description"
 }`;
 
         try {
@@ -1975,150 +1974,76 @@ Return ONLY valid JSON, no markdown, no explanation:
     }
 
     function downloadForms() {
-        const jsPDFLib = window.jspdf || window.jsPDF;
-        if (!jsPDFLib) { showToast('⚠️ PDF library not loaded yet, try again'); return; }
-        const { jsPDF } = jsPDFLib.jsPDF ? jsPDFLib : window.jspdf || { jsPDF: jsPDFLib };
         const d = getFormData();
+        if (!d.client) { showToast('⚠️ Enter client name first'); return; }
 
-        // ── Mileage Log PDF ──
-        const ml = new jsPDF({ unit: 'pt', format: 'letter' });
-        const pw = 612, margin = 40;
-        let y = 45;
+        // Format state lines table
+        let slRows = '';
+        if (stateLineData && stateLineData.length > 0) {
+            slRows = stateLineData.map(r => `
+                <tr>
+                    <td>${r.date || ''}</td>
+                    <td>${r.state || ''}</td>
+                    <td>${r.highways || ''}</td>
+                    <td>${r.odometer || ''}</td>
+                    <td style="text-align:center; font-weight:bold;">${r.miles || ''}</td>
+                </tr>`).join('');
+        } else {
+            slRows = '<tr><td colspan="5" style="text-align:center; color:#999; padding:12px;">No state lines calculated</td></tr>';
+        }
 
-        ml.setFontSize(13).setFont(undefined, 'bold');
-        ml.text("JEAN'S BUS SERVICE, INC.", pw/2, y, {align:'center'});
-        y += 24;
+        const html = `<!DOCTYPE html><html><head><title>Mileage Log — Charter #${d.driveNumber}</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 0.5in; font-size: 10pt; }
+    h2 { text-align: center; margin: 0 0 4px; font-size: 13pt; }
+    .sub { text-align: center; font-size: 9pt; margin-bottom: 14px; color: #444; }
+    .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 12px; font-size: 9.5pt; }
+    .hf label { font-weight: bold; }
+    .odo-box { border: 1px solid #000; padding: 6px 12px; margin-bottom: 12px; font-size: 11pt; }
+    .odo-box span { font-weight: bold; font-size: 13pt; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    th { background: #333; color: white; padding: 6px 8px; text-align: left; font-size: 9pt; }
+    td { padding: 5px 8px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+    .sig-line { border-top: 1px solid #000; width: 280px; display: inline-block; margin-top: 30px; }
+    .date-line { border-top: 1px solid #000; width: 120px; display: inline-block; margin-top: 30px; margin-left: 40px; }
+    @media print { body { margin: 0.4in; } }
+</style></head><body>
+<h2>JEAN'S BUS SERVICE, INC.</h2>
+<div class="sub">207 Furman Hall Road · Greenville, SC 29609 · 864-242-1673</div>
+<div class="header-grid">
+    <div class="hf"><label>Bus #:</label> ${d.vehicle || '—'}</div>
+    <div class="hf"><label>Driver:</label> J.R. Grimaldo</div>
+    <div class="hf"><label>Charter #:</label> ${d.driveNumber || '—'}</div>
+    <div class="hf"><label>Client:</label> ${d.client || '—'}</div>
+    <div class="hf"><label>Origin:</label> ${d.pickupAddress || '—'}</div>
+    <div class="hf"><label>Destination:</label> ${d.dropoffAddress || '—'}</div>
+    <div class="hf"><label>Begin Date:</label> ${d.startDate || '—'}</div>
+    <div class="hf"><label>End Date:</label> ${d.endDate || '—'}</div>
+</div>
+<div class="odo-box"><strong>Mileage / Driver Log</strong> &nbsp;&nbsp; Beginning Trip Odometer Reading: <span>${d.beginOdo.toLocaleString()}</span></div>
+<table>
+    <thead><tr><th>Date</th><th>State</th><th>Highways Used</th><th>Odometer</th><th>Total Miles</th></tr></thead>
+    <tbody>${slRows}</tbody>
+</table>
+<div>
+    <div class="sig-line"></div>
+    <div class="date-line"></div>
+    <br>
+    <span style="font-size:9pt;">Driver Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date</span>
+    <br><br>
+    <em style="font-size:10pt;">J.R. Grimaldo</em>
+</div>
+</body></html>`;
 
-        const leftFields = [['Bus #:', d.vehicle], ['Charter #:', d.driveNumber], ['Origin:', d.pickupAddress], ['Begin Date:', d.startDate]];
-        const rightFields = [['Driver:', 'J.R. Grimaldo'], ['Client:', d.client], ['Destination:', d.dropoffAddress], ['End Date:', d.endDate]];
-        ml.setFontSize(8);
-        leftFields.forEach(([lbl, val], i) => {
-            const fy = y + i * 19;
-            ml.setFont(undefined,'bold').text(lbl, margin, fy);
-            ml.setFont(undefined,'normal').text(val || '', margin + 58, fy);
-            ml.line(margin + 58, fy + 2, margin + 195, fy + 2);
-            ml.setFont(undefined,'bold').text(rightFields[i][0], pw/2 + 10, fy);
-            ml.setFont(undefined,'normal').text(rightFields[i][1] || '', pw/2 + 68, fy);
-            ml.line(pw/2 + 68, fy + 2, pw - margin, fy + 2);
-        });
-        y += 4 * 19 + 10;
-
-        ml.setFont(undefined,'bold').setFontSize(9);
-        ml.text('Mileage / Driver Log', margin, y);
-        ml.rect(pw/2 - 20, y - 11, pw/2 - margin + 20, 16);
-        ml.setFont(undefined,'normal').setFontSize(8);
-        ml.text(`Beginning Trip Odometer Reading: ${d.beginOdo.toLocaleString()}`, pw/2 - 15, y);
-        y += 16;
-
-        const colX = [margin, margin+50, margin+100, margin+300, margin+400];
-        const colW = [50, 50, 200, 100, 72];
-        const headers = ['DATE','STATE','HIGHWAYS USED','ODOMETER','TOTAL MILES'];
-        ml.setFillColor(80,80,80).rect(margin, y-9, pw - 2*margin, 16, 'F');
-        ml.setTextColor(255).setFont(undefined,'bold').setFontSize(7.5);
-        headers.forEach((h,i) => ml.text(h, colX[i]+3, y));
-        ml.setTextColor(0).setFont(undefined,'normal');
-        y += 8;
-
-        const rowH = 17;
-        d.stateLines.forEach(row => {
-            y += rowH;
-            ml.rect(margin, y-10, pw-2*margin, rowH);
-            ml.setFontSize(8);
-            ml.text(row.date || '', colX[0]+3, y);
-            ml.text(row.state || '', colX[1]+3, y);
-            ml.text((row.highways || '').substring(0,38), colX[2]+3, y);
-            ml.text(row.odometer || '', colX[3]+3, y);
-            ml.text(row.miles || '', colX[4]+3, y);
-        });
-        const blankRows = Math.max(0, 8 - d.stateLines.length);
-        for (let i = 0; i < blankRows; i++) { y += rowH; ml.rect(margin, y-10, pw-2*margin, rowH); }
-
-        y += 25;
-        ml.line(margin, y, pw-margin, y);
-        y += 22;
-        ml.setFont(undefined,'bold').setFontSize(9).text('Drivers Signature:', margin, y);
-        ml.line(margin+105, y+2, margin+260, y+2);
-        ml.setFont(undefined,'italic').setFontSize(11).text('J.R. Grimaldo', margin+108, y);
-        ml.setFont(undefined,'bold').setFontSize(9).text('Date:', pw-130, y);
-        ml.setFont(undefined,'normal').text(d.endDate || d.startDate || '', pw-100, y);
-        ml.line(pw-105, y+2, pw-margin, y+2);
-
-        ml.save(`mileage_log_${d.driveNumber || 'trip'}.pdf`);
-
-        // ── Charter Order Form PDF ──
-        setTimeout(() => {
-            const co = new jsPDF({ unit: 'pt', format: 'letter' });
-            y = 40;
-            co.setFontSize(13).setFont(undefined,'bold');
-            co.text("Jean's Bus Service, Inc.", pw/2, y, {align:'center'});
-            y += 14;
-            co.setFontSize(8).setFont(undefined,'normal');
-            co.text('207 Furman Hall Road  •  Greenville, SC 29609  •  864-242-1673', pw/2, y, {align:'center'});
-            y += 20;
-
-            co.setFont(undefined,'bold').setFontSize(9);
-            co.text(`Charter Order: ${d.driveNumber || '—'}`, pw/2+10, y);
-            co.text(`Driver: J.R. Grimaldo`, pw/2+10, y+14);
-            co.text(`Bus #: ${d.vehicle || '—'}   Bus Type: 56 Passenger`, pw/2+10, y+28);
-            co.text(`Client: ${d.client}`, margin, y);
-            co.text(`Origin: ${d.pickupAddress || '—'}`, margin, y+14);
-            co.text(`Destination: ${d.dropoffAddress || '—'}`, margin, y+28);
-            co.text(`Begin Date: ${d.startDate || '—'}   End Date: ${d.endDate || '—'}`, margin, y+42);
-            y += 62;
-
-            co.line(margin, y, pw-margin, y);
-            y += 16;
-
-            // Itinerary table
-            const iHeaders = ['Location','Date','Actual Miles'];
-            const iColX = [margin, margin+260, margin+360];
-            co.setFillColor(80,80,80).rect(margin, y-10, pw-2*margin, 16, 'F');
-            co.setTextColor(255).setFont(undefined,'bold').setFontSize(8);
-            iHeaders.forEach((h,i) => co.text(h, iColX[i]+3, y));
-            co.setTextColor(0).setFont(undefined,'normal');
-            y += 8;
-
-            const legs = [
-                ['OnDuty – Greenville Bus Lot', d.startDate, ''],
-                [`Pickup – ${d.pickupAddress || 'First Pickup'}`, d.startDate, d.legLotToPickup || ''],
-                [`Dropoff – ${d.dropoffAddress || 'Destination'}`, d.startDate, d.legPickupToDropoff || ''],
-                [`Local – ${d.dropoffAddress ? d.dropoffAddress.split(',').slice(-2).join(',').trim() : 'Destination'}`, '', d.legLocal || ''],
-                [`Pickup (Return) – ${d.dropoffAddress || 'Destination'}`, d.endDate, ''],
-                [`Dropoff – ${d.pickupAddress || 'Return Dropoff'}`, d.endDate, d.legReturnToDropoff || ''],
-                ['OffDuty – Greenville Bus Lot', d.endDate, d.legDropoffToLot || ''],
-            ];
-            legs.forEach(([loc, date, miles]) => {
-                y += 22;
-                co.rect(margin, y-12, pw-2*margin, 22);
-                co.setFontSize(8);
-                co.text(loc.substring(0,52), iColX[0]+3, y);
-                co.text(date || '', iColX[1]+3, y);
-                co.setFont(undefined,'bold').text(String(miles || ''), iColX[2]+3, y);
-                co.setFont(undefined,'normal');
-            });
-
-            y += 30;
-            co.line(margin, y, pw-margin, y);
-            y += 16;
-
-            co.setFont(undefined,'bold').setFontSize(9);
-            co.text('End Odometer:', margin, y);
-            co.setFont(undefined,'normal').text(d.endOdo.toLocaleString(), margin+90, y);
-            co.setFont(undefined,'bold').text('Begin Odometer:', margin+160, y);
-            co.setFont(undefined,'normal').text(d.beginOdo.toLocaleString(), margin+255, y);
-            co.setFont(undefined,'bold').text('Total Miles:', margin+330, y);
-            co.setFont(undefined,'bold').setFontSize(11).text(String(d.totalMiles.toLocaleString()), margin+400, y);
-
-            y += 30;
-            co.setFont(undefined,'bold').setFontSize(9).text('Driver Signature:', margin, y);
-            co.line(margin+105, y+2, margin+280, y+2);
-            co.setFont(undefined,'italic').setFontSize(11).text('J.R. Grimaldo', margin+108, y);
-            co.setFont(undefined,'bold').setFontSize(9).text('Date:', pw-130, y);
-            co.setFont(undefined,'normal').text(d.endDate || d.startDate || '', pw-100, y);
-
-            co.save(`charter_form_${d.driveNumber || 'trip'}.pdf`);
-            showToast('✅ Both PDFs downloaded!');
-        }, 500);
+        const win = window.open('', '_blank');
+        if (win) {
+            win.document.write(html);
+            win.document.close();
+            setTimeout(() => win.print(), 800);
+            showToast('✅ Mileage log opened — tap Share → Print → Save as PDF');
+        } else {
+            showToast('⚠️ Allow popups for this site to view forms');
+        }
     }
 
     // ── Email to JoLynn ──
