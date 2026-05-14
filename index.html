@@ -1383,12 +1383,18 @@
             ? `trip_${trip.drive_number}.json`
             : `trip_${Date.now()}.json`;
         const blob = new Blob([JSON.stringify({ trips: [trip] }, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
+            navigator.share({ files: [new File([blob], filename, { type: 'application/json' })], title: filename });
+        } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
         showToast(`✅ Saved & exported as ${filename}`);
         resetForm(true);
@@ -1636,13 +1642,20 @@
         try { localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(book)); } catch(e) {}
         // Auto-download address book for backup
         try {
-            const blob = new Blob([JSON.stringify(book, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'address_book.json';
-            a.click();
-            URL.revokeObjectURL(url);
+            const abBlob = new Blob([JSON.stringify(book, null, 2)], { type: 'application/json' });
+            const abFile = new File([abBlob], 'address_book.json', { type: 'application/json' });
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [abFile] })) {
+                navigator.share({ files: [abFile], title: 'address_book.json' });
+            } else {
+                const url = URL.createObjectURL(abBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'address_book.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
         } catch(e) {}
     }
 
