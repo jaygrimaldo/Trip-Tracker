@@ -85,9 +85,11 @@
             font-family: 'DM Sans', sans-serif;
             font-weight: 500;
         }
+        .app-header h1 {
             font-size: 1.2rem;
             font-weight: 700;
             letter-spacing: -0.02em;
+            margin: 0;
         }
         .app-header .version {
             font-family: 'JetBrains Mono', monospace;
@@ -656,6 +658,8 @@
 
 <div class="container">
 
+<form id="tripForm" onsubmit="event.preventDefault(); return false;" autocomplete="off">
+
     <!-- Division Toggle -->
     <div class="division-toggle">
         <button type="button" class="div-btn active-charter" id="btnCharter" onclick="setDivision('charter')">
@@ -899,10 +903,10 @@
 
     <!-- Save & Export -->
     <div class="btn-row">
-        <button class="save-btn" id="saveBtn" onclick="saveTrip()">
+        <button type="button" class="save-btn" id="saveBtn" onclick="saveTrip()">
             Save Trip
         </button>
-        <button class="export-btn charter-style" id="exportBtn" onclick="exportAll()">
+        <button type="button" class="export-btn charter-style" id="exportBtn" onclick="exportAll()">
             Export
         </button>
     </div>
@@ -913,8 +917,11 @@
 
     <input type="file" id="addressBookInput" accept=".json" style="display:none;" onchange="restoreAddressBook(this)">
     <button type="button" class="action-btn visible" style="max-width:500px; margin:0 auto 8px; display:block; border-color:var(--border);" onclick="document.getElementById('addressBookInput').click()">📋 Restore Address Book</button>
+    <button type="button" class="action-btn visible" style="max-width:500px; margin:0 auto 8px; display:block; border-color:var(--border);" onclick="backupAddressBook()">💾 Backup Address Book</button>
 
     <a href="#" class="reset-link" onclick="resetForm(); return false;">Reset Form</a>
+
+</form>
 
 </div>
 
@@ -938,6 +945,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
     // ── Theme Toggle ──
     const THEME_KEY = 'tripTracker_theme';
@@ -958,6 +966,7 @@
     let currentStatus = 'upcoming';
     let stateLineData = [];
     let tripQueue = [];
+    let cachedPdfBlobs = null;   // { mileage: Blob, charter: Blob, mileageName, charterName }
 
     // ── Status Toggle ──
     function setStatus(status) {
@@ -1046,8 +1055,7 @@
             }
         } catch(e) {}
 
-        // Default: set today's date
-        document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+        // Default: leave start date blank (user fills it in per trip)
         recalc();
     });
 
@@ -1596,8 +1604,10 @@
         document.getElementById('tripType').value = 'Day Trip';
         document.getElementById('beginMiles').value = '';
         document.getElementById('endMiles').value = '';
-        document.getElementById('totalMilesDisplay').textContent = '0';
+        const tmd = document.getElementById('totalMilesDisplay');
+        if (tmd) tmd.textContent = '0';
         document.getElementById('isRelay').value = 'false';
+        document.getElementById('startDate').value = '';   // ← was being set to today
         document.getElementById('endDate').value = '';
         document.getElementById('tips').value = '0';
         document.getElementById('mealExpenses').value = '0';
@@ -1610,7 +1620,27 @@
         document.getElementById('tourBonusPerDay').value = '150';
         stateLineData = [];
         document.getElementById('stateLinesStatus').style.display = 'none';
+        document.getElementById('stateLinesStatus').textContent = '';
         document.getElementById('routeOverride').value = '';
+
+        // Reset mileage summary display
+        ['sum1','sum2','sum3','sum4','sum5','sumTotal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        });
+
+        // Clear preview modal content so old data doesn't flash if preview is reopened
+        const pm = document.getElementById('previewMileage');
+        const pc = document.getElementById('previewCharter');
+        if (pm) pm.innerHTML = '';
+        if (pc) pc.innerHTML = '';
+
+        // Clear cached PDF blobs (used by Email to JoLynn)
+        cachedPdfBlobs = null;
+
+        // Hide route status
+        const rs = document.getElementById('claudeRouteStatus');
+        if (rs) { rs.style.display = 'none'; rs.textContent = ''; }
 
         const grid = document.getElementById('hoursGrid');
         grid.innerHTML = `
@@ -1623,9 +1653,9 @@
             </div>
         `;
 
-        document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
         setDivision('charter');
         recalc();
+        updateMileageSummary();
 
         // Clear auto-save
         try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e) {}
@@ -1642,23 +1672,38 @@
 
     function saveAddressBook(book) {
         try { localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(book)); } catch(e) {}
-        // Auto-download address book for backup
+        // NOTE: auto-download removed — was creating address_book 2.json, 3.json, etc.
+        // Use the explicit "Backup Address Book" button when you want a backup file.
+    }
+
+    function backupAddressBook() {
+        const book = loadAddressBook();
+        if (!book || book.length === 0) {
+            showToast('⚠️ Address book is empty');
+            return;
+        }
         try {
             const abBlob = new Blob([JSON.stringify(book, null, 2)], { type: 'application/json' });
-            const abFile = new File([abBlob], 'address_book.json', { type: 'application/json' });
+            const filename = 'address_book.json';
+            const abFile = new File([abBlob], filename, { type: 'application/json' });
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [abFile] })) {
-                navigator.share({ files: [abFile], title: 'address_book.json' });
+                navigator.share({ files: [abFile], title: filename })
+                    .then(() => showToast(`✅ Backed up ${book.length} client${book.length !== 1 ? 's' : ''}`))
+                    .catch(() => {});
             } else {
                 const url = URL.createObjectURL(abBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'address_book.json';
+                a.download = filename;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+                showToast(`✅ Backed up ${book.length} client${book.length !== 1 ? 's' : ''}`);
             }
-        } catch(e) {}
+        } catch(e) {
+            showToast('❌ Backup failed');
+        }
     }
 
     function addToAddressBook(trip) {
@@ -1807,10 +1852,13 @@
         status.style.display = 'block';
         status.textContent = 'Getting route suggestion...';
 
-        const prompt = `A 56-passenger charter bus is driving from Greenville, SC (3 Cauley Dr) to ${destination}.
-What is the best direct highway route? List only the main highways in order.
+        const prompt = `A 56-passenger charter bus is driving FROM ${pickup || 'the pickup address'} TO ${destination}.
+Find the most direct interstate highway route between these two exact points.
+List ONLY the main highways in order, and CRITICALLY include the compass direction (N/S/E/W) for each one based on the actual travel from ${pickup || 'origin'} to ${destination} (e.g. "I-85 S" if the destination is south/southwest of the origin).
+Do not include local roads or short connectors.
+
 Return ONLY valid JSON, no markdown:
-{"route": "highway names in order", "note": "one sentence about the route"}`;
+{"route": "highway names with directions, comma-separated", "note": "one short sentence about the route"}`;
 
         try {
             const response = await fetch('https://bus-tracker-proxy.jaygrimaldo.workers.dev', {
@@ -1859,6 +1907,7 @@ Return ONLY valid JSON, no markdown:
         btn.textContent = '⏳ Calculating...';
         btn.disabled = true;
         status.style.display = 'block';
+        status.style.color = 'var(--text-dim)';
         status.textContent = 'Contacting Claude...';
 
         const odoAtPickup = parseFloat(document.getElementById('odometerAtPickup').value) || null;
@@ -1867,22 +1916,34 @@ Return ONLY valid JSON, no markdown:
         const odoReturnDropoff = parseFloat(document.getElementById('odometerAtReturnDropoff').value) || null;
         const endOdo = parseFloat(document.getElementById('endMiles').value) || null;
 
-        // Ask Claude ONLY for the route structure - states, highways, and approximate mile percentages
-        const prompt = `A professional bus driver is driving from Greenville, SC (3 Cauley Dr) to ${destination}.
-${routeOverride ? `IMPORTANT: The driver confirms the exact route taken is: ${routeOverride}. Use ONLY these highways — do not add or substitute any others.` : 'Use the most direct highway route for a 56-passenger bus.'}
+        // Tightened prompt:
+        //   - Uses ACTUAL pickup address as origin (not hardcoded lot)
+        //   - Enforces ORIGIN → DESTINATION direction
+        //   - Asks for ONLY the states actually crossed (no extras)
+        //   - Asks for BOTH outbound and return direction highway names (no regex flipping)
+        //   - Caps at 5 states to prevent runaway responses
+        const origin = pickup || 'Greenville, SC';
+        const prompt = `A professional bus driver is making a round trip.
+Origin: ${origin}.
+Destination: ${destination}.
+${routeOverride
+    ? `EXACT route taken (driver-confirmed): ${routeOverride}. Use ONLY these highways. Do NOT add I-26, I-77, I-95, I-40, I-20, or any other highway not on this list.`
+    : 'Use the single most direct interstate route a 56-passenger charter bus would take.'}
 
-List ONLY the states actually crossed on this route.
-For each state section use ONLY the highways specified above.
-Provide the approximate percentage of total one-way trip miles in each state.
+Rules:
+1. List ONLY the states actually crossed, in geographic order from origin to destination.
+2. Do NOT include any state the route does not physically cross.
+3. Maximum 5 states.
+4. For each state give: state code, outbound-direction highway names (e.g. "I-85 S"), return-direction highway names (e.g. "I-85 N"), and approximate percentage of one-way miles in that state.
+5. Percentages across all states must sum to 100.
 
-Return ONLY valid JSON, no markdown:
+Return ONLY valid JSON, no markdown, no commentary:
 {
   "states": [
-    {"state": "SC", "highways": "exact highway names from route", "pct": 35},
-    {"state": "GA", "highways": "exact highway names from route", "pct": 65}
+    {"state": "SC", "highways_out": "I-85 S", "highways_back": "I-85 N", "pct": 35},
+    {"state": "GA", "highways_out": "I-85 S, I-285 W", "highways_back": "I-285 E, I-85 N", "pct": 65}
   ],
-  "suggested_route": "highway list",
-  "route_summary": "one line"
+  "route_summary": "one short sentence"
 }`;
 
         try {
@@ -1891,7 +1952,7 @@ Return ONLY valid JSON, no markdown:
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: 'claude-sonnet-4-20250514',
-                    max_tokens: 500,
+                    max_tokens: 600,
                     messages: [{ role: 'user', content: prompt }]
                 })
             });
@@ -1900,57 +1961,82 @@ Return ONLY valid JSON, no markdown:
             if (!data.content || !data.content[0]) throw new Error('No response');
             const text = data.content[0].text.replace(/```json|```/g, '').trim();
             const result = JSON.parse(text);
-            const states = result.states || [];
+            let states = result.states || [];
 
-            // Now calculate odometers mathematically from actual readings
+            // Validate + sanitize: cap at 5 states, ensure required fields
+            states = states.slice(0, 5).filter(s => s && s.state && typeof s.pct === 'number');
+            if (states.length === 0) throw new Error('No valid states returned');
+
+            // Normalize percentages to sum to 100 (in case Claude is slightly off)
+            const pctSum = states.reduce((a, s) => a + s.pct, 0);
+            if (pctSum > 0 && Math.abs(pctSum - 100) > 0.1) {
+                states.forEach(s => { s.pct = (s.pct / pctSum) * 100; });
+            }
+
+            // Calculate odometers mathematically from actual readings
             const outboundTotal = odoDropoff && beginOdo ? odoDropoff - beginOdo : 0;
             const returnTotal = endOdo && odoPickup ? endOdo - odoPickup : 0;
 
+            // Build outbound rows
             const outbound = [];
             let runningOdo = beginOdo;
             states.forEach((s, i) => {
+                const isLast = i === states.length - 1;
                 const miles = Math.round(outboundTotal * s.pct / 100);
-                runningOdo += miles;
+                const segMiles = isLast && odoDropoff ? Math.round(odoDropoff - runningOdo) : miles;
+                const segOdo = isLast && odoDropoff ? odoDropoff : runningOdo + miles;
                 outbound.push({
                     date: startDate || '',
                     state: s.state,
-                    highways: s.highways,
-                    odometer: i === states.length - 1 ? odoDropoff : runningOdo,
-                    miles: i === states.length - 1 ? Math.round(odoDropoff - (runningOdo - miles)) : miles
+                    highways: s.highways_out || s.highways || '',
+                    odometer: segOdo,
+                    miles: segMiles > 0 ? segMiles : miles
                 });
+                runningOdo = segOdo;
             });
 
-            // Local miles at destination
+            // Local miles at destination (only if positive)
             const localMiles = odoPickup && odoDropoff ? odoPickup - odoDropoff : 0;
             if (localMiles > 0) {
                 outbound.push({
                     date: startDate || '',
-                    state: states[states.length - 1]?.state || 'GA',
+                    state: states[states.length - 1].state,
                     highways: 'Local',
                     odometer: odoPickup,
                     miles: localMiles
                 });
             }
 
-            // Return trip - reverse the states
+            // Return rows — use Claude's explicit return-direction highways (no regex flipping)
             const returnStates = [...states].reverse();
             const ret = [];
             runningOdo = odoPickup || beginOdo;
             returnStates.forEach((s, i) => {
+                const isLast = i === returnStates.length - 1;
                 const miles = Math.round(returnTotal * s.pct / 100);
-                runningOdo += miles;
+                const segMiles = isLast && endOdo ? Math.round(endOdo - runningOdo) : miles;
+                const segOdo = isLast && endOdo ? endOdo : runningOdo + miles;
+                // Prefer explicit return highways; fall back to flipped outbound only if missing
+                let highwaysBack = s.highways_back;
+                if (!highwaysBack) {
+                    const out = s.highways_out || s.highways || '';
+                    highwaysBack = out
+                        .replace(/\bS\b/g, '__N__').replace(/\bN\b/g, 'S').replace(/__N__/g, 'N')
+                        .replace(/\bW\b/g, '__E__').replace(/\bE\b/g, 'W').replace(/__E__/g, 'E');
+                }
                 ret.push({
                     date: endDate || startDate || '',
-                    state: i === 0 ? s.state : s.state,
-                    highways: s.highways.replace(' S', ' N').replace(' W', ' E'),
-                    odometer: i === returnStates.length - 1 ? endOdo : runningOdo,
-                    miles: i === returnStates.length - 1 ? Math.round(endOdo - (runningOdo - miles)) : miles
+                    state: s.state,
+                    highways: highwaysBack,
+                    odometer: segOdo,
+                    miles: segMiles > 0 ? segMiles : miles
                 });
+                runningOdo = segOdo;
             });
 
             stateLineData = [...outbound, ...ret];
 
-            status.textContent = `✅ ${stateLineData.length} rows calculated — ${result.route_summary || ''}`;
+            status.textContent = `✅ ${stateLineData.length} rows calculated — ${result.route_summary || states.map(s => s.state).join(' → ')}`;
             status.style.color = 'var(--tour-green)';
             showToast(`✅ State lines ready!`);
             autoSave();
@@ -2068,89 +2154,308 @@ Return ONLY valid JSON, no markdown:
         document.getElementById('previewModal').classList.remove('open');
     }
 
-    function downloadForms() {
-        const d = getFormData();
-        if (!d.client) { showToast('⚠️ Enter client name first'); return; }
+    // ── Build Mileage Log PDF (jsPDF) ──
+    function buildMileageLogPdf(d) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const margin = 36;
 
-        // Format state lines table
-        let slRows = '';
-        if (stateLineData && stateLineData.length > 0) {
-            slRows = stateLineData.map(r => `
-                <tr>
-                    <td>${r.date || ''}</td>
-                    <td>${r.state || ''}</td>
-                    <td>${r.highways || ''}</td>
-                    <td>${r.odometer || ''}</td>
-                    <td style="text-align:center; font-weight:bold;">${r.miles || ''}</td>
-                </tr>`).join('');
-        } else {
-            slRows = '<tr><td colspan="5" style="text-align:center; color:#999; padding:12px;">No state lines calculated</td></tr>';
+        // Title
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text("JEAN'S BUS SERVICE, INC.", pageW / 2, margin + 4, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('207 Furman Hall Road · Greenville, SC 29609 · 864-242-1673',
+            pageW / 2, margin + 20, { align: 'center' });
+
+        // Header grid (two columns)
+        let y = margin + 44;
+        doc.setFontSize(10);
+        const leftX = margin;
+        const rightX = pageW / 2 + 10;
+        const lh = 14;
+
+        const drawLabelVal = (x, yy, label, val) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(label + ':', x, yy);
+            const labelW = doc.getTextWidth(label + ':') + 4;
+            doc.setFont('helvetica', 'normal');
+            doc.text(String(val || '—'), x + labelW, yy);
+        };
+
+        drawLabelVal(leftX,  y,        'Bus #',       d.vehicle);
+        drawLabelVal(rightX, y,        'Driver',      'J.R. Grimaldo');
+        drawLabelVal(leftX,  y + lh,   'Charter #',   d.driveNumber);
+        drawLabelVal(rightX, y + lh,   'Client',      d.client);
+        drawLabelVal(leftX,  y + lh*2, 'Origin',      d.pickupAddress);
+        drawLabelVal(rightX, y + lh*2, 'Destination', d.dropoffAddress);
+        drawLabelVal(leftX,  y + lh*3, 'Begin Date',  d.startDate);
+        drawLabelVal(rightX, y + lh*3, 'End Date',    d.endDate);
+
+        y += lh * 4 + 6;
+
+        // Beginning odometer box
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.8);
+        doc.rect(margin, y, pageW - margin * 2, 24);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('Mileage / Driver Log    Beginning Trip Odometer Reading: ' +
+            (d.beginOdo ? d.beginOdo.toLocaleString() : '—'),
+            margin + 8, y + 16);
+
+        y += 36;
+
+        // State lines table — autotable
+        const rows = (stateLineData && stateLineData.length > 0)
+            ? stateLineData.map(r => [
+                r.date || '',
+                r.state || '',
+                r.highways || '',
+                r.odometer != null ? String(r.odometer) : '',
+                r.miles != null ? String(r.miles) : ''
+            ])
+            : [['', '', 'No state lines calculated — tap Calculate State Lines first', '', '']];
+
+        doc.autoTable({
+            startY: y,
+            head: [['Date', 'State', 'Highways Used', 'Odometer', 'Total Miles']],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 4 },
+            headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: 'bold' },
+            columnStyles: {
+                0: { cellWidth: 70 },
+                1: { cellWidth: 40, halign: 'center' },
+                2: { cellWidth: 'auto' },
+                3: { cellWidth: 70, halign: 'right' },
+                4: { cellWidth: 60, halign: 'center', fontStyle: 'bold' }
+            },
+            margin: { left: margin, right: margin }
+        });
+
+        // Signature lines
+        const sigY = doc.lastAutoTable.finalY + 60;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.8);
+        doc.line(margin, sigY, margin + 240, sigY);
+        doc.line(margin + 280, sigY, margin + 400, sigY);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('Driver Signature', margin, sigY + 12);
+        doc.text('Date', margin + 280, sigY + 12);
+        doc.setFont('helvetica', 'italic');
+        doc.text('J.R. Grimaldo', margin, sigY + 28);
+
+        return doc.output('blob');
+    }
+
+    // ── Build Charter Form PDF (jsPDF) — mileage breakdown ──
+    function buildCharterFormPdf(d) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const margin = 36;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text("CHARTER MILEAGE SUMMARY", pageW / 2, margin + 4, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text("Jean's Bus Service, Inc. — 207 Furman Hall Road, Greenville, SC 29609",
+            pageW / 2, margin + 20, { align: 'center' });
+
+        let y = margin + 44;
+        const leftX = margin;
+        const rightX = pageW / 2 + 10;
+        const lh = 14;
+
+        const drawLabelVal = (x, yy, label, val) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(label + ':', x, yy);
+            const labelW = doc.getTextWidth(label + ':') + 4;
+            doc.setFont('helvetica', 'normal');
+            doc.text(String(val || '—'), x + labelW, yy);
+        };
+
+        doc.setFontSize(10);
+        drawLabelVal(leftX,  y,        'Bus #',         d.vehicle);
+        drawLabelVal(rightX, y,        'Driver',        'J.R. Grimaldo');
+        drawLabelVal(leftX,  y + lh,   'Charter #',     d.driveNumber);
+        drawLabelVal(rightX, y + lh,   'Client',        d.client);
+        drawLabelVal(leftX,  y + lh*2, 'Begin Date',    d.startDate);
+        drawLabelVal(rightX, y + lh*2, 'End Date',      d.endDate);
+        drawLabelVal(leftX,  y + lh*3, 'Begin Odo',     d.beginOdo ? d.beginOdo.toLocaleString() : '—');
+        drawLabelVal(rightX, y + lh*3, 'End Odo',       d.endOdo ? d.endOdo.toLocaleString() : '—');
+
+        y += lh * 4 + 12;
+
+        const rows = [
+            ['Lot → First Pickup',    d.legLotToPickup || 0],
+            ['Pickup → Dropoff',      d.legPickupToDropoff || 0],
+            ['Local at Destination',  d.legLocal || 0],
+            ['Return → Dropoff',      d.legReturnToDropoff || 0],
+            ['Dropoff → Lot',         d.legDropoffToLot || 0]
+        ].map(r => [r[0], String(r[1])]);
+
+        doc.autoTable({
+            startY: y,
+            head: [['Leg', 'Miles']],
+            body: rows,
+            foot: [['Total Miles', String(d.totalMiles || 0)]],
+            theme: 'grid',
+            styles: { fontSize: 10, cellPadding: 6 },
+            headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: 'bold' },
+            footStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold' },
+            columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { cellWidth: 100, halign: 'center', fontStyle: 'bold' }
+            },
+            margin: { left: margin, right: margin }
+        });
+
+        const sigY = doc.lastAutoTable.finalY + 60;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.8);
+        doc.line(margin, sigY, margin + 240, sigY);
+        doc.line(margin + 280, sigY, margin + 400, sigY);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('Driver Signature', margin, sigY + 12);
+        doc.text('Date', margin + 280, sigY + 12);
+        doc.setFont('helvetica', 'italic');
+        doc.text('J.R. Grimaldo', margin, sigY + 28);
+
+        return doc.output('blob');
+    }
+
+    // ── Build BOTH PDFs and cache them, return the blobs + filenames ──
+    function buildBothPdfs() {
+        const d = getFormData();
+        if (!d.client) { showToast('⚠️ Enter client name first'); return null; }
+
+        // Sanity check on jsPDF
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            showToast('⚠️ PDF library not loaded — check your connection');
+            return null;
         }
 
-        const html = `<!DOCTYPE html><html><head><title>Mileage Log — Charter #${d.driveNumber}</title>
-<style>
-    body { font-family: Arial, sans-serif; margin: 0.5in; font-size: 10pt; }
-    h2 { text-align: center; margin: 0 0 4px; font-size: 13pt; }
-    .sub { text-align: center; font-size: 9pt; margin-bottom: 14px; color: #444; }
-    .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 12px; font-size: 9.5pt; }
-    .hf label { font-weight: bold; }
-    .odo-box { border: 1px solid #000; padding: 6px 12px; margin-bottom: 12px; font-size: 11pt; }
-    .odo-box span { font-weight: bold; font-size: 13pt; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-    th { background: #333; color: white; padding: 6px 8px; text-align: left; font-size: 9pt; }
-    td { padding: 5px 8px; border-bottom: 1px solid #ddd; font-size: 9pt; }
-    .sig-line { border-top: 1px solid #000; width: 280px; display: inline-block; margin-top: 30px; }
-    .date-line { border-top: 1px solid #000; width: 120px; display: inline-block; margin-top: 30px; margin-left: 40px; }
-    @media print { body { margin: 0.4in; } }
-</style></head><body>
-<h2>JEAN'S BUS SERVICE, INC.</h2>
-<div class="sub">207 Furman Hall Road · Greenville, SC 29609 · 864-242-1673</div>
-<div class="header-grid">
-    <div class="hf"><label>Bus #:</label> ${d.vehicle || '—'}</div>
-    <div class="hf"><label>Driver:</label> J.R. Grimaldo</div>
-    <div class="hf"><label>Charter #:</label> ${d.driveNumber || '—'}</div>
-    <div class="hf"><label>Client:</label> ${d.client || '—'}</div>
-    <div class="hf"><label>Origin:</label> ${d.pickupAddress || '—'}</div>
-    <div class="hf"><label>Destination:</label> ${d.dropoffAddress || '—'}</div>
-    <div class="hf"><label>Begin Date:</label> ${d.startDate || '—'}</div>
-    <div class="hf"><label>End Date:</label> ${d.endDate || '—'}</div>
-</div>
-<div class="odo-box"><strong>Mileage / Driver Log</strong> &nbsp;&nbsp; Beginning Trip Odometer Reading: <span>${d.beginOdo.toLocaleString()}</span></div>
-<table>
-    <thead><tr><th>Date</th><th>State</th><th>Highways Used</th><th>Odometer</th><th>Total Miles</th></tr></thead>
-    <tbody>${slRows}</tbody>
-</table>
-<div>
-    <div class="sig-line"></div>
-    <div class="date-line"></div>
-    <br>
-    <span style="font-size:9pt;">Driver Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date</span>
-    <br><br>
-    <em style="font-size:10pt;">J.R. Grimaldo</em>
-</div>
-</body></html>`;
+        const safeClient = (d.client || 'trip').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+        const safeDrive = (d.driveNumber || 'NA').replace(/[^a-zA-Z0-9]/g, '_');
 
-        const win = window.open('', '_blank');
-        if (win) {
-            win.document.write(html);
-            win.document.close();
-            setTimeout(() => win.print(), 800);
-            showToast('✅ Mileage log opened — tap Share → Print → Save as PDF');
+        const mileageBlob = buildMileageLogPdf(d);
+        const charterBlob = buildCharterFormPdf(d);
+
+        const mileageName = `Mileage_Log_${safeDrive}_${safeClient}.pdf`;
+        const charterName = `Charter_Form_${safeDrive}_${safeClient}.pdf`;
+
+        cachedPdfBlobs = {
+            mileage: mileageBlob,
+            charter: charterBlob,
+            mileageName,
+            charterName,
+            driveNumber: d.driveNumber,
+            client: d.client,
+            startDate: d.startDate,
+            vehicle: d.vehicle
+        };
+
+        return cachedPdfBlobs;
+    }
+
+    function downloadForms() {
+        const pdfs = buildBothPdfs();
+        if (!pdfs) return;
+
+        const mileageFile = new File([pdfs.mileage], pdfs.mileageName, { type: 'application/pdf' });
+        const charterFile = new File([pdfs.charter], pdfs.charterName, { type: 'application/pdf' });
+
+        // Prefer Web Share API on mobile — lets user save to Files, share to Mail, etc.
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [mileageFile, charterFile] })) {
+            navigator.share({
+                files: [mileageFile, charterFile],
+                title: 'Trip PDFs',
+                text: `Charter #${pdfs.driveNumber || ''} — ${pdfs.client || ''}`
+            })
+            .then(() => showToast('✅ PDFs shared'))
+            .catch(err => {
+                // User cancelled OR share failed — fall back to direct download
+                if (err && err.name !== 'AbortError') {
+                    triggerPdfDownload(pdfs);
+                }
+            });
         } else {
-            showToast('⚠️ Allow popups for this site to view forms');
+            triggerPdfDownload(pdfs);
         }
     }
 
+    function triggerPdfDownload(pdfs) {
+        // Direct download both files
+        downloadBlob(pdfs.mileage, pdfs.mileageName);
+        // Small delay so the second download isn't suppressed by the browser
+        setTimeout(() => {
+            downloadBlob(pdfs.charter, pdfs.charterName);
+            showToast('✅ Both PDFs downloaded');
+        }, 400);
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
     // ── Email to JoLynn ──
-    function emailToJoLynn() {
+    // mailto: cannot attach files (browser security). On iOS/Android the Web Share API CAN,
+    // because when the user picks "Mail" from the share sheet, the files are attached for them.
+    async function emailToJoLynn() {
         const client = document.getElementById('client').value.trim() || '—';
         const driveNum = document.getElementById('driveNumber').value.trim() || '—';
         const startDate = document.getElementById('startDate').value || '—';
         const vehicle = document.getElementById('vehicle').value.trim() || '—';
         const subject = `Trip Log — Charter #${driveNum} — ${client}`;
         const body = `Hi JoLynn,\n\nPlease find the trip log for:\n\nCharter #: ${driveNum}\nClient: ${client}\nBus #: ${vehicle}\nDate: ${startDate}\n\nThank you,\nJ.R. Grimaldo`;
-        const mailtoLink = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailtoLink, '_blank');
+
+        // Always rebuild PDFs fresh — avoids stale cache if user edited the form after preview
+        const pdfs = buildBothPdfs();
+        if (!pdfs) return;
+
+        // Try Web Share API first — this is the ONLY way to attach files when launching mail
+        if (navigator.share && navigator.canShare) {
+            const mileageFile = new File([pdfs.mileage], pdfs.mileageName, { type: 'application/pdf' });
+            const charterFile = new File([pdfs.charter], pdfs.charterName, { type: 'application/pdf' });
+            const shareData = {
+                files: [mileageFile, charterFile],
+                title: subject,
+                text: body
+            };
+            if (navigator.canShare(shareData)) {
+                try {
+                    await navigator.share(shareData);
+                    showToast('✅ Shared — pick Mail to send to JoLynn');
+                    return;
+                } catch(err) {
+                    if (err && err.name === 'AbortError') return;
+                    // Otherwise fall through to mailto fallback
+                }
+            }
+        }
+
+        // Fallback: open mail with a body that tells the user to attach manually,
+        // and trigger downloads so the PDFs end up in their Files app.
+        triggerPdfDownload(pdfs);
+        const bodyWithNote = body + `\n\n(PDFs were just downloaded — please attach Mileage Log and Charter Form before sending.)`;
+        const mailtoLink = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyWithNote)}`;
+        window.location.href = mailtoLink;
     }
 
     // ── Scan Charter Form ──
