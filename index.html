@@ -1390,10 +1390,15 @@
         renderQueue();
 
         // Auto-export to iCloud — filename based on drive number
+        // Address book is embedded so it's always backed up automatically
         const filename = trip.drive_number
             ? `trip_${trip.drive_number}.json`
             : `trip_${Date.now()}.json`;
-        const blob = new Blob([JSON.stringify({ trips: [trip] }, null, 2)], { type: 'application/json' });
+        const exportData = {
+            trips: [trip],
+            address_book: loadAddressBook()
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
             navigator.share({ files: [new File([blob], filename, { type: 'application/json' })], title: filename });
         } else {
@@ -1424,16 +1429,17 @@
         }
 
         // Single trip = single object, multiple = wrapped in {trips: [...]}
+        // Address book is always embedded for automatic backup
         let data, filename;
         if (allTrips.length === 1) {
-            data = JSON.stringify(allTrips[0], null, 2);
             const safeDest = (allTrips[0].client || allTrips[0].destination || 'trip').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
             const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
             filename = `trip_${safeDest}_${ts}.json`;
+            data = JSON.stringify({ trips: allTrips, address_book: loadAddressBook() }, null, 2);
         } else {
-            data = JSON.stringify({ trips: allTrips }, null, 2);
             const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
             filename = `trips_${allTrips.length}_${ts}.json`;
+            data = JSON.stringify({ trips: allTrips, address_book: loadAddressBook() }, null, 2);
         }
 
         const blob = new Blob([data], { type: 'application/json' });
@@ -2600,11 +2606,35 @@ Respond ONLY with valid JSON, no markdown:
         const reader = new FileReader();
         reader.onload = e => {
             try {
-                const book = JSON.parse(e.target.result);
-                localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(book));
-                showToast(`✅ Address book restored — ${book.length} client${book.length !== 1 ? 's' : ''}`);
+                const parsed = JSON.parse(e.target.result);
+
+                // Handle three possible formats:
+                // 1. Trip export file with embedded address book: { trips: [...], address_book: [...] }
+                // 2. Standalone address book array: [...]
+                // 3. Legacy standalone object with address_book key
+                let book;
+                if (parsed.address_book && Array.isArray(parsed.address_book)) {
+                    book = parsed.address_book;
+                } else if (Array.isArray(parsed)) {
+                    book = parsed;
+                } else {
+                    throw new Error('Unrecognized format');
+                }
+
+                // Merge with existing rather than overwrite — preserves any entries added since last export
+                const existing = loadAddressBook();
+                let added = 0;
+                book.forEach(entry => {
+                    const match = existing.find(e => e.name.toLowerCase() === entry.name.toLowerCase());
+                    if (!match) {
+                        existing.push(entry);
+                        added++;
+                    }
+                });
+                localStorage.setItem(ADDRESSBOOK_KEY, JSON.stringify(existing));
+                showToast(`✅ Address book restored — ${added} new, ${existing.length} total`);
             } catch(err) {
-                showToast('❌ Invalid address book file');
+                showToast('❌ Could not read address book from file');
             }
             input.value = '';
         };
