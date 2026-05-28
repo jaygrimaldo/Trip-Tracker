@@ -1910,13 +1910,20 @@
         }
     }
 
-    // ── Extract highway names with directions from a Google Maps DirectionsResult ──
+    // ── Extract highway names from a Google Maps DirectionsResult ──
     function extractHighwaysFromRoute(directionsResult) {
+        const route = directionsResult.routes[0];
+
+        // Google Maps provides a clean summary string like "I-85 S and I-95 S" — use it first
+        if (route.summary && route.summary.trim()) {
+            return route.summary.trim();
+        }
+
+        // Fallback: parse step instructions for highway names
         const seen = new Set();
         const highways = [];
 
-        const legs = directionsResult.routes[0].legs;
-        for (const leg of legs) {
+        for (const leg of route.legs) {
             for (const step of leg.steps) {
                 if (!step.html_instructions) continue;
                 const instruction = step.html_instructions
@@ -1925,19 +1932,15 @@
                     .replace(/\s+/g, ' ')
                     .trim();
 
+                // Match I-85 S, I-85 South, US-19, US 19, etc.
                 const pattern = /\b(I-\d+[A-Z]?|US[- ]\d+[A-Z]?)\s*([NSEW]|North|South|East|West)?\b/g;
                 let match;
                 while ((match = pattern.exec(instruction)) !== null) {
                     const hwy = match[1].replace(/\s+/, '-').toUpperCase();
                     const rawDir = match[2] || '';
-                    const dir = rawDir.length > 1
-                        ? rawDir.charAt(0).toUpperCase()
-                        : rawDir.toUpperCase();
+                    const dir = rawDir.length > 1 ? rawDir.charAt(0).toUpperCase() : rawDir.toUpperCase();
                     const key = dir ? `${hwy} ${dir}` : hwy;
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        highways.push(key);
-                    }
+                    if (!seen.has(key)) { seen.add(key); highways.push(key); }
                 }
             }
         }
