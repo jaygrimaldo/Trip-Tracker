@@ -1883,9 +1883,9 @@
                     destination: destination,
                     travelMode: google.maps.TravelMode.DRIVING,
                     avoidFerries: true
-                }, (result, status) => {
-                    if (status === 'OK') resolve(result);
-                    else reject(new Error(status));
+                }, (result, gmStatus) => {
+                    if (gmStatus === 'OK') resolve(result);
+                    else reject(new Error(gmStatus));
                 });
             });
 
@@ -1902,7 +1902,7 @@
             }
         } catch(e) {
             status.style.color = 'var(--danger)';
-            status.textContent = '❌ Could not get route — check addresses and try again';
+            status.textContent = `❌ ${e.message || 'Could not get route'} — check addresses and try again`;
             console.error(e);
         } finally {
             btn.textContent = '🗺️ Get Route';
