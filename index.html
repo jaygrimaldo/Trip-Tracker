@@ -712,7 +712,7 @@
             </label>
             <input type="text" id="routeOverride" placeholder="e.g. I-85 S" autocomplete="off" oninput="onRouteEdit()">
         </div>
-        <button type="button" class="action-btn visible" style="margin-top:10px; border-color:#3b82f6; color:#3b82f6;" onclick="showClaudeRoute()" id="showRouteBtn">🗺️ Show Claude's Route</button>
+        <button type="button" class="action-btn visible" style="margin-top:10px; border-color:#3b82f6; color:#3b82f6;" onclick="getGoogleMapsRoute()" id="showRouteBtn">🗺️ Get Route</button>
         <div id="claudeRouteStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
@@ -946,6 +946,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCnlLTTLjcUR-UX_8mC7ryzUjKJqMWR4NY&libraries=routes&callback=initGoogleMaps" async defer></script>
 <script>
     // ── Theme Toggle ──
     const THEME_KEY = 'tripTracker_theme';
@@ -1839,55 +1840,103 @@
         autoSave();
     }
 
-    // ── Show Claude's Route ──
-    async function showClaudeRoute() {
+    // ── Google Maps init callback ──
+    let googleMapsReady = false;
+    function initGoogleMaps() {
+        googleMapsReady = true;
+    }
+
+    // ── Get Route via Google Maps ──
+    async function getGoogleMapsRoute() {
         const destination = document.getElementById('dropoffAddress').value.trim();
         const pickup = document.getElementById('pickupAddress').value.trim();
+        if (!pickup) { showToast('⚠️ Enter pickup address first'); return; }
         if (!destination) { showToast('⚠️ Enter dropoff address first'); return; }
 
         const btn = document.getElementById('showRouteBtn');
         const status = document.getElementById('claudeRouteStatus');
-        btn.textContent = '⏳ Asking Claude...';
+        btn.textContent = '⏳ Getting route...';
         btn.disabled = true;
         status.style.display = 'block';
-        status.textContent = 'Getting route suggestion...';
+        status.style.color = 'var(--text-dim)';
+        status.textContent = 'Contacting Google Maps...';
 
-        const prompt = `A 56-passenger charter bus is driving FROM ${pickup || 'the pickup address'} TO ${destination}.
-Find the most direct interstate highway route between these two exact points.
-List ONLY the main highways in order, and CRITICALLY include the compass direction (N/S/E/W) for each one based on the actual travel from ${pickup || 'origin'} to ${destination} (e.g. "I-85 S" if the destination is south/southwest of the origin).
-Do not include local roads or short connectors.
-
-Return ONLY valid JSON, no markdown:
-{"route": "highway names with directions, comma-separated", "note": "one short sentence about the route"}`;
+        if (!googleMapsReady || !window.google || !window.google.maps) {
+            status.style.color = 'var(--danger)';
+            status.textContent = '❌ Google Maps not loaded yet — try again in a moment';
+            btn.textContent = '🗺️ Get Route';
+            btn.disabled = false;
+            return;
+        }
 
         try {
-            const response = await fetch('https://bus-tracker-proxy.jaygrimaldo.workers.dev', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 200,
-                    messages: [{ role: 'user', content: prompt }]
-                })
+            const directionsService = new google.maps.DirectionsService();
+            const result = await new Promise((resolve, reject) => {
+                directionsService.route({
+                    origin: pickup,
+                    destination: destination,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    avoidFerries: true
+                }, (result, status) => {
+                    if (status === 'OK') resolve(result);
+                    else reject(new Error(status));
+                });
             });
-            const data = await response.json();
-            const text = data.content[0].text.replace(/```json|```/g, '').trim();
-            const result = JSON.parse(text);
 
-            // Auto-fill the route field if empty
-            if (result.route) {
-                document.getElementById('routeOverride').value = result.route;
+            const highways = extractHighwaysFromRoute(result);
+
+            if (highways) {
+                document.getElementById('routeOverride').value = highways;
+                onRouteEdit();
+                status.style.color = 'var(--tour-green)';
+                status.textContent = `✅ ${highways} — verify against your GPS`;
+                showToast('✅ Route from Google Maps');
+            } else {
+                throw new Error('No highways found in route');
             }
-            status.style.color = 'var(--tour-green)';
-            status.textContent = `✅ ${result.route} — ${result.note || ''}`;
-            showToast('✅ Route shown — compare with your GPS');
         } catch(e) {
             status.style.color = 'var(--danger)';
-            status.textContent = '❌ Error getting route';
+            status.textContent = '❌ Could not get route — check addresses and try again';
+            console.error(e);
         } finally {
-            btn.textContent = '🗺️ Show Claude\'s Route';
+            btn.textContent = '🗺️ Get Route';
             btn.disabled = false;
         }
+    }
+
+    // ── Extract highway names with directions from a Google Maps DirectionsResult ──
+    function extractHighwaysFromRoute(directionsResult) {
+        const seen = new Set();
+        const highways = [];
+
+        const legs = directionsResult.routes[0].legs;
+        for (const leg of legs) {
+            for (const step of leg.steps) {
+                const instruction = step.html_instructions
+                    .replace(/<[^>]*>/g, ' ')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                // Match interstates and US highways with optional direction
+                const pattern = /\b(I-\d+[A-Z]?|US[- ]\d+[A-Z]?)\s*([NSEW]|North|South|East|West)?\b/g;
+                let match;
+                while ((match = pattern.exec(instruction)) !== null) {
+                    const hwy = match[1].replace(/\s+/, '-').toUpperCase();
+                    const rawDir = match[2] || '';
+                    const dir = rawDir.length > 1
+                        ? rawDir.charAt(0).toUpperCase()
+                        : rawDir.toUpperCase();
+                    const key = dir ? `${hwy} ${dir}` : hwy;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        highways.push(key);
+                    }
+                }
+            }
+        }
+
+        return highways.join(', ');
     }
 
     // ── Calculate State Lines via Claude API ──
