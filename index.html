@@ -1918,13 +1918,13 @@
         const legs = directionsResult.routes[0].legs;
         for (const leg of legs) {
             for (const step of leg.steps) {
+                if (!step.html_instructions) continue;
                 const instruction = step.html_instructions
                     .replace(/<[^>]*>/g, ' ')
                     .replace(/&nbsp;/g, ' ')
                     .replace(/\s+/g, ' ')
                     .trim();
 
-                // Match interstates and US highways with optional direction
                 const pattern = /\b(I-\d+[A-Z]?|US[- ]\d+[A-Z]?)\s*([NSEW]|North|South|East|West)?\b/g;
                 let match;
                 while ((match = pattern.exec(instruction)) !== null) {
