@@ -35,47 +35,22 @@
   }
   .wrap{max-width:560px;margin:0 auto;padding:0 16px 48px;}
 
-  /* Header */
   header{
     background:var(--green);
     color:#fff;
     padding:calc(18px + env(safe-area-inset-top)) 16px 18px;
     text-align:center;
   }
-  .wordmark{
-    font-weight:800;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    font-size:1.18rem;
-    margin:0;
-  }
-  .tagline{
-    margin:4px 0 0;
-    font-size:.82rem;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    opacity:.82;
-  }
+  .wordmark{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:1.18rem;margin:0;}
+  .tagline{margin:4px 0 0;font-size:.82rem;letter-spacing:.16em;text-transform:uppercase;opacity:.82;}
 
-  /* Trip meta */
-  .meta{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    margin:18px 0 8px;
-  }
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 8px;}
   .meta .full{grid-column:1 / -1;}
   label{display:block;font-size:.74rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 4px 2px;}
   input{
-    width:100%;
-    font-family:var(--sans);
-    font-size:1rem;
-    color:var(--ink);
-    background:var(--surface);
-    border:1.5px solid var(--line);
-    border-radius:10px;
-    padding:11px 12px;
-    -webkit-appearance:none;
+    width:100%;font-family:var(--sans);font-size:1rem;color:var(--ink);
+    background:var(--surface);border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 12px;-webkit-appearance:none;
   }
   input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-tint);}
 
@@ -85,39 +60,29 @@
   }
   .section-label::after{content:"";flex:1;height:1.5px;background:var(--line);}
 
-  /* Odometer readings — the trip meter */
-  .meter{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);overflow:hidden;}
-  .reading{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);}
-  .reading:last-child{border-bottom:none;}
-  .marker{
-    flex:0 0 auto;min-width:42px;height:30px;border-radius:6px;
-    background:var(--green);color:#fff;font:700 .68rem/30px var(--sans);
-    letter-spacing:.06em;text-align:center;text-transform:uppercase;
+  /* Odometer readings — two-column grid */
+  .readings{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;}
+  .rcell label{min-height:2.1em;}
+  .rcell input{
+    font-family:var(--mono);font-size:1.16rem;font-variant-numeric:tabular-nums;
+    letter-spacing:.04em;text-align:right;
   }
-  .reading .body{flex:1;min-width:0;}
-  .reading .name{font-size:.92rem;font-weight:600;}
-  .reading input{
-    font-family:var(--mono);font-size:1.18rem;font-variant-numeric:tabular-nums;
-    letter-spacing:.04em;text-align:right;padding:7px 10px;margin-top:3px;
-  }
-  .leg{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.82rem;color:var(--muted);
-       padding:2px 14px 8px 68px;}
-  .leg.bad{color:var(--danger);font-weight:600;}
 
-  .total{
-    display:flex;justify-content:space-between;align-items:baseline;
-    background:var(--green-tint);padding:14px 16px;margin-top:0;
-    border-top:1.5px solid var(--line);
-  }
-  .total .lbl{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.82rem;color:var(--green-dark);}
-  .total .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.7rem;font-weight:700;color:var(--green-dark);}
+  /* Trip mileage summary card */
+  .summary{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:6px 16px;}
+  .srow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .srow:last-child{border-bottom:none;}
+  .slabel{font-size:.95rem;color:var(--ink);}
+  .sval{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.05rem;font-weight:600;color:var(--green-dark);min-width:3ch;text-align:right;}
+  .sval.bad{color:var(--danger);font-size:.82rem;}
+  .srow.total{border-top:2px solid var(--line);border-bottom:none;margin-top:2px;padding-top:14px;}
+  .srow.total .slabel{font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:.85rem;}
+  .srow.total .sval{font-size:1.5rem;font-weight:700;}
 
-  /* Buttons */
   .btn{
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    width:100%;border:none;border-radius:12px;
-    font-family:var(--sans);font-size:1.02rem;font-weight:700;letter-spacing:.02em;
-    padding:15px;margin-top:12px;color:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    border:none;border-radius:12px;font-family:var(--sans);font-size:1.02rem;font-weight:700;
+    letter-spacing:.02em;padding:15px;margin-top:12px;color:#fff;cursor:pointer;
     -webkit-tap-highlight-color:transparent;
   }
   .btn:active{transform:translateY(1px);}
@@ -141,7 +106,6 @@
   .amber-head{color:var(--amber-dark);}
   .amber-head::after{background:var(--line);}
 
-  /* Toast */
   #toast{
     position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
     background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;
@@ -149,7 +113,6 @@
     max-width:90%;text-align:center;
   }
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
   @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>
 </head>
@@ -177,7 +140,10 @@
   </div>
 
   <div class="section-label">Odometer readings</div>
-  <div class="meter" id="meter"></div>
+  <div class="readings" id="readings"></div>
+
+  <div class="section-label">Trip mileage summary</div>
+  <div class="summary" id="summary"></div>
 
   <button class="btn btn-ghost" id="shareBtn">Save / share this log</button>
 
@@ -215,49 +181,60 @@
   // ---- Maintenance recipients (Johnny & Robbie) ----
   var MAINT_NUMBERS = "8644447067,8644447068";
 
+  // iOS needs sms://open?addresses=...  for >1 recipient; Android uses sms:nums?body=...
+  function smsHref(numbers, body){
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var enc = encodeURIComponent(body);
+    return isIOS
+      ? "sms://open?addresses=" + numbers + "&body=" + enc
+      : "sms:" + numbers + "?body=" + enc;
+  }
+
   // ---- Google review link (shortened at send time when possible) ----
   var GOOGLE_REVIEW_LINK = "https://www.google.com/search?q=jean%27s+services+reviews&si=AL3DRZHPJ4YuUm1amz1ApnUJGVznQaBtbdlcSPTOF56QShV-nIAEPHiwPDobwe0LIzy2nVWkQx_rl4pzA7TwwFp9gE9i8TfW3MvYwO2u8kXpavE60rQAn2Z_38fTcvCpuo8m78eqTwIe2Q6a9X6n5reMKnPdM3OYU8BuUpjfXbDQkq8h30UspP4%3D";
 
   // ---- Six odometer readings, in order driven ----
   var READINGS = [
-    { id:"r0", short:"OUT", name:"Bus Lot — out" },
-    { id:"r1", short:"P1",  name:"First pickup" },
-    { id:"r2", short:"DRP", name:"Drop-off" },
-    { id:"r3", short:"LOC", name:"Local" },
-    { id:"r4", short:"P2",  name:"Last pickup" },
-    { id:"r5", short:"IN",  name:"Bus Lot — in" }
+    { id:"r0", name:"Begin Miles (Lot)" },
+    { id:"r1", name:"Arrive First Pickup" },
+    { id:"r2", name:"Arrive Dropoff" },
+    { id:"r3", name:"Leave Dropoff (Return)" },
+    { id:"r4", name:"Arrive Return Dropoff" },
+    { id:"r5", name:"End Miles (Lot)" }
   ];
+  // One leg between each consecutive pair of readings
   var LEG_LABELS = [
-    "Lot → First pickup",
-    "First pickup → Drop-off",
-    "Drop-off → Local",
-    "Local → Last pickup",
-    "Last pickup → Lot"
+    "Lot → First Pickup",
+    "Pickup → Dropoff",
+    "Local at Destination",
+    "Return → Dropoff",
+    "Dropoff → Lot"
   ];
 
-  // ---- Build the meter UI ----
-  var meter = document.getElementById("meter");
-  READINGS.forEach(function(r, i){
-    var row = document.createElement("div");
-    row.className = "reading";
-    row.innerHTML =
-      '<div class="marker">' + r.short + '</div>' +
-      '<div class="body">' +
-        '<div class="name">' + r.name + '</div>' +
-        '<input id="' + r.id + '" type="text" inputmode="numeric" autocomplete="off" placeholder="odometer">' +
-      '</div>';
-    meter.appendChild(row);
-    if (i < READINGS.length - 1) {
-      var leg = document.createElement("div");
-      leg.className = "leg";
-      leg.id = "leg" + i;
-      meter.appendChild(leg);
-    }
+  // ---- Build the readings grid ----
+  var readingsEl = document.getElementById("readings");
+  READINGS.forEach(function(r){
+    var cell = document.createElement("div");
+    cell.className = "rcell";
+    cell.innerHTML =
+      '<label for="' + r.id + '">' + r.name + '</label>' +
+      '<input id="' + r.id + '" type="text" inputmode="numeric" autocomplete="off" placeholder="odometer">';
+    readingsEl.appendChild(cell);
   });
-  var totalEl = document.createElement("div");
-  totalEl.className = "total";
-  totalEl.innerHTML = '<span class="lbl">Total miles</span><span class="val" id="totalVal">—</span>';
-  meter.appendChild(totalEl);
+
+  // ---- Build the trip mileage summary ----
+  var summaryEl = document.getElementById("summary");
+  LEG_LABELS.forEach(function(lbl, i){
+    var row = document.createElement("div");
+    row.className = "srow";
+    row.innerHTML = '<span class="slabel">' + lbl + '</span><span class="sval" id="s' + i + '">—</span>';
+    summaryEl.appendChild(row);
+  });
+  var totalRow = document.createElement("div");
+  totalRow.className = "srow total";
+  totalRow.innerHTML = '<span class="slabel">Total Miles</span><span class="sval" id="stotal">—</span>';
+  summaryEl.appendChild(totalRow);
 
   function readVal(id){
     var v = parseFloat((document.getElementById(id).value || "").replace(/[^0-9.]/g, ""));
@@ -266,38 +243,22 @@
 
   function recompute(){
     var vals = READINGS.map(function(r){ return readVal(r.id); });
-    for (var i = 0; i < READINGS.length - 1; i++) {
-      var el = document.getElementById("leg" + i);
+    for (var i = 0; i < LEG_LABELS.length; i++) {
+      var el = document.getElementById("s" + i);
       var a = vals[i], b = vals[i+1];
-      if (a === null || b === null) { el.textContent = ""; el.classList.remove("bad"); continue; }
+      if (a === null || b === null) { el.textContent = "—"; el.classList.remove("bad"); continue; }
       var d = b - a;
-      if (d < 0) {
-        el.textContent = LEG_LABELS[i] + ":  check readings (went down)";
-        el.classList.add("bad");
-      } else {
-        el.textContent = LEG_LABELS[i] + ":  " + d.toLocaleString() + " mi";
-        el.classList.remove("bad");
-      }
+      if (d < 0) { el.textContent = "check readings"; el.classList.add("bad"); }
+      else { el.textContent = d.toLocaleString() + " mi"; el.classList.remove("bad"); }
     }
     var first = null, last = null;
     for (var j = 0; j < vals.length; j++) { if (vals[j] !== null){ first = vals[j]; break; } }
     for (var k = vals.length - 1; k >= 0; k--) { if (vals[k] !== null){ last = vals[k]; break; } }
-    var tv = document.getElementById("totalVal");
-    if (first !== null && last !== null && last >= first) {
-      tv.textContent = (last - first).toLocaleString();
-    } else {
-      tv.textContent = "—";
-    }
+    var tv = document.getElementById("stotal");
+    tv.textContent = (first !== null && last !== null && last >= first) ? (last - first).toLocaleString() + " mi" : "—";
     saveMeta();
   }
 
-  // recompute on any input
-  document.addEventListener("input", function(e){
-    if (e.target && (e.target.id === "driver" || e.target.id === "bus" || e.target.tagName === "INPUT")) {
-      if (READINGS.some(function(r){ return r.id === e.target.id; })) recompute();
-      else saveMeta();
-    }
-  });
   READINGS.forEach(function(r){ document.getElementById(r.id).addEventListener("input", recompute); });
 
   // ---- Remember driver name + bus # between trips (silently skips if blocked) ----
@@ -314,7 +275,6 @@
     } catch (e) {}
     document.getElementById("driver").addEventListener("input", saveMeta);
     document.getElementById("bus").addEventListener("input", saveMeta);
-    // default the date to today
     var dt = document.getElementById("date");
     if (!dt.value) { dt.value = new Date().toISOString().slice(0,10); }
   })();
@@ -329,7 +289,7 @@
     toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
   }
 
-  // ---- Build a plain-text summary of the log ----
+  // ---- Plain-text summary of the log ----
   function buildSummary(){
     var driver = document.getElementById("driver").value.trim() || "—";
     var bus = document.getElementById("bus").value.trim() || "—";
@@ -340,11 +300,10 @@
     lines.push("");
     var vals = READINGS.map(function(r){ return readVal(r.id); });
     READINGS.forEach(function(r, i){
-      var v = vals[i];
-      lines.push(r.name + ": " + (v === null ? "—" : v.toLocaleString()));
+      lines.push(r.name + ": " + (vals[i] === null ? "—" : vals[i].toLocaleString()));
     });
     lines.push("");
-    for (var i = 0; i < READINGS.length - 1; i++) {
+    for (var i = 0; i < LEG_LABELS.length; i++) {
       var a = vals[i], b = vals[i+1];
       if (a !== null && b !== null && b >= a) lines.push(LEG_LABELS[i] + ": " + (b-a).toLocaleString() + " mi");
     }
@@ -395,7 +354,6 @@
         link + ". Thank you so much!";
       window.location.href = "sms:" + phone + "?body=" + encodeURIComponent(msg);
     };
-    // Try to shorten the link; fall back to the full link if offline
     var done = false;
     var finish = function(link){ if (done) return; done = true; go(link); };
     try {
@@ -403,7 +361,7 @@
         .then(function(r){ return r.ok ? r.text() : GOOGLE_REVIEW_LINK; })
         .then(function(short){ finish(short); })
         .catch(function(){ finish(GOOGLE_REVIEW_LINK); });
-      setTimeout(function(){ finish(GOOGLE_REVIEW_LINK); }, 2500); // don't hang on bad signal
+      setTimeout(function(){ finish(GOOGLE_REVIEW_LINK); }, 2500);
     } catch (e) { finish(GOOGLE_REVIEW_LINK); }
   });
 
@@ -417,7 +375,7 @@
     var msg = "Heads up from " + driver + " — Bus #" + bus + " on " + date + ". " +
       "A few things I noticed or that the client mentioned (some may need attention, others minor): " +
       notes + ". Thanks!";
-    window.location.href = "sms:" + MAINT_NUMBERS + "?body=" + encodeURIComponent(msg);
+    window.location.href = smsHref(MAINT_NUMBERS, msg);
   });
 
   recompute();
