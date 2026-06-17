@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B6E3B">
+<title>Jean's Bus Service — Driver Mileage</title>
+<style>
+  :root{
+    --bg:#EBEFE8;
+    --surface:#FFFFFF;
+    --ink:#19211A;
+    --muted:#5C665B;
+    --line:#D6DCD2;
+    --green:#0B6E3B;
+    --green-dark:#084F2B;
+    --green-tint:#E4F0E8;
+    --amber:#B8540C;
+    --amber-dark:#8F3F08;
+    --amber-tint:#FBEADB;
+    --danger:#B3261E;
+    --radius:14px;
+    --mono:"SF Mono","Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.45;
+    -webkit-text-size-adjust:100%;
+    padding:0 0 env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px 48px;}
+
+  /* Header */
+  header{
+    background:var(--green);
+    color:#fff;
+    padding:calc(18px + env(safe-area-inset-top)) 16px 18px;
+    text-align:center;
+  }
+  .wordmark{
+    font-weight:800;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-size:1.18rem;
+    margin:0;
+  }
+  .tagline{
+    margin:4px 0 0;
+    font-size:.82rem;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    opacity:.82;
+  }
+
+  /* Trip meta */
+  .meta{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin:18px 0 8px;
+  }
+  .meta .full{grid-column:1 / -1;}
+  label{display:block;font-size:.74rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 4px 2px;}
+  input{
+    width:100%;
+    font-family:var(--sans);
+    font-size:1rem;
+    color:var(--ink);
+    background:var(--surface);
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:11px 12px;
+    -webkit-appearance:none;
+  }
+  input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-tint);}
+
+  .section-label{
+    font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--green-dark);margin:26px 2px 10px;display:flex;align-items:center;gap:8px;
+  }
+  .section-label::after{content:"";flex:1;height:1.5px;background:var(--line);}
+
+  /* Odometer readings — the trip meter */
+  .meter{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .reading{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);}
+  .reading:last-child{border-bottom:none;}
+  .marker{
+    flex:0 0 auto;min-width:42px;height:30px;border-radius:6px;
+    background:var(--green);color:#fff;font:700 .68rem/30px var(--sans);
+    letter-spacing:.06em;text-align:center;text-transform:uppercase;
+  }
+  .reading .body{flex:1;min-width:0;}
+  .reading .name{font-size:.92rem;font-weight:600;}
+  .reading input{
+    font-family:var(--mono);font-size:1.18rem;font-variant-numeric:tabular-nums;
+    letter-spacing:.04em;text-align:right;padding:7px 10px;margin-top:3px;
+  }
+  .leg{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.82rem;color:var(--muted);
+       padding:2px 14px 8px 68px;}
+  .leg.bad{color:var(--danger);font-weight:600;}
+
+  .total{
+    display:flex;justify-content:space-between;align-items:baseline;
+    background:var(--green-tint);padding:14px 16px;margin-top:0;
+    border-top:1.5px solid var(--line);
+  }
+  .total .lbl{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.82rem;color:var(--green-dark);}
+  .total .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.7rem;font-weight:700;color:var(--green-dark);}
+
+  /* Buttons */
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;border:none;border-radius:12px;
+    font-family:var(--sans);font-size:1.02rem;font-weight:700;letter-spacing:.02em;
+    padding:15px;margin-top:12px;color:#fff;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-green{background:var(--green);}
+  .btn-green:active{background:var(--green-dark);}
+  .btn-amber{background:var(--amber);}
+  .btn-amber:active{background:var(--amber-dark);}
+  .btn-ghost{background:var(--surface);color:var(--green-dark);border:1.5px solid var(--green);}
+
+  .card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:14px;}
+  .card .row{margin-bottom:10px;}
+  .card .row:last-of-type{margin-bottom:0;}
+  .hint{font-size:.8rem;color:var(--muted);margin:6px 2px 0;}
+  textarea{
+    width:100%;font-family:var(--sans);font-size:1rem;color:var(--ink);
+    background:var(--surface);border:1.5px solid var(--line);border-radius:10px;
+    padding:11px 12px;min-height:84px;resize:vertical;-webkit-appearance:none;
+  }
+  textarea:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-tint);}
+
+  .amber-head{color:var(--amber-dark);}
+  .amber-head::after{background:var(--line);}
+
+  /* Toast */
+  #toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;
+    font-size:.9rem;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:50;
+    max-width:90%;text-align:center;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<header>
+  <h1 class="wordmark">Jean's Bus Service</h1>
+  <p class="tagline">Driver Mileage</p>
+</header>
+
+<div class="wrap">
+
+  <div class="meta">
+    <div>
+      <label for="driver">Driver</label>
+      <input id="driver" type="text" autocomplete="name" placeholder="Your name">
+    </div>
+    <div>
+      <label for="bus">Bus #</label>
+      <input id="bus" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 841">
+    </div>
+    <div class="full">
+      <label for="date">Date</label>
+      <input id="date" type="date">
+    </div>
+  </div>
+
+  <div class="section-label">Odometer readings</div>
+  <div class="meter" id="meter"></div>
+
+  <button class="btn btn-ghost" id="shareBtn">Save / share this log</button>
+
+  <div class="section-label">Ask for a review</div>
+  <div class="card">
+    <div class="row">
+      <label for="cName">Contact name</label>
+      <input id="cName" type="text" autocomplete="off" placeholder="Who you served">
+    </div>
+    <div class="row">
+      <label for="cPhone">Contact phone</label>
+      <input id="cPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="(864) 555-0123">
+    </div>
+    <button class="btn btn-green" id="reviewBtn">Text a review request</button>
+    <p class="hint">Opens a ready-to-send text with the Google review link.</p>
+  </div>
+
+  <div class="section-label amber-head">Report a vehicle issue</div>
+  <div class="card">
+    <div class="row">
+      <label for="issue">What's going on</label>
+      <textarea id="issue" placeholder="Anything you noticed, or that the client mentioned…"></textarea>
+    </div>
+    <button class="btn btn-amber" id="issueBtn">Text Johnny &amp; Robbie</button>
+    <p class="hint">Sends to both, with your name, bus #, and date.</p>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  "use strict";
+
+  // ---- Maintenance recipients (Johnny & Robbie) ----
+  var MAINT_NUMBERS = "8644447067,8644447068";
+
+  // ---- Google review link (shortened at send time when possible) ----
+  var GOOGLE_REVIEW_LINK = "https://www.google.com/search?q=jean%27s+services+reviews&si=AL3DRZHPJ4YuUm1amz1ApnUJGVznQaBtbdlcSPTOF56QShV-nIAEPHiwPDobwe0LIzy2nVWkQx_rl4pzA7TwwFp9gE9i8TfW3MvYwO2u8kXpavE60rQAn2Z_38fTcvCpuo8m78eqTwIe2Q6a9X6n5reMKnPdM3OYU8BuUpjfXbDQkq8h30UspP4%3D";
+
+  // ---- Six odometer readings, in order driven ----
+  var READINGS = [
+    { id:"r0", short:"OUT", name:"Bus Lot — out" },
+    { id:"r1", short:"P1",  name:"First pickup" },
+    { id:"r2", short:"DRP", name:"Drop-off" },
+    { id:"r3", short:"LOC", name:"Local" },
+    { id:"r4", short:"P2",  name:"Last pickup" },
+    { id:"r5", short:"IN",  name:"Bus Lot — in" }
+  ];
+  var LEG_LABELS = [
+    "Lot → First pickup",
+    "First pickup → Drop-off",
+    "Drop-off → Local",
+    "Local → Last pickup",
+    "Last pickup → Lot"
+  ];
+
+  // ---- Build the meter UI ----
+  var meter = document.getElementById("meter");
+  READINGS.forEach(function(r, i){
+    var row = document.createElement("div");
+    row.className = "reading";
+    row.innerHTML =
+      '<div class="marker">' + r.short + '</div>' +
+      '<div class="body">' +
+        '<div class="name">' + r.name + '</div>' +
+        '<input id="' + r.id + '" type="text" inputmode="numeric" autocomplete="off" placeholder="odometer">' +
+      '</div>';
+    meter.appendChild(row);
+    if (i < READINGS.length - 1) {
+      var leg = document.createElement("div");
+      leg.className = "leg";
+      leg.id = "leg" + i;
+      meter.appendChild(leg);
+    }
+  });
+  var totalEl = document.createElement("div");
+  totalEl.className = "total";
+  totalEl.innerHTML = '<span class="lbl">Total miles</span><span class="val" id="totalVal">—</span>';
+  meter.appendChild(totalEl);
+
+  function readVal(id){
+    var v = parseFloat((document.getElementById(id).value || "").replace(/[^0-9.]/g, ""));
+    return isNaN(v) ? null : v;
+  }
+
+  function recompute(){
+    var vals = READINGS.map(function(r){ return readVal(r.id); });
+    for (var i = 0; i < READINGS.length - 1; i++) {
+      var el = document.getElementById("leg" + i);
+      var a = vals[i], b = vals[i+1];
+      if (a === null || b === null) { el.textContent = ""; el.classList.remove("bad"); continue; }
+      var d = b - a;
+      if (d < 0) {
+        el.textContent = LEG_LABELS[i] + ":  check readings (went down)";
+        el.classList.add("bad");
+      } else {
+        el.textContent = LEG_LABELS[i] + ":  " + d.toLocaleString() + " mi";
+        el.classList.remove("bad");
+      }
+    }
+    var first = null, last = null;
+    for (var j = 0; j < vals.length; j++) { if (vals[j] !== null){ first = vals[j]; break; } }
+    for (var k = vals.length - 1; k >= 0; k--) { if (vals[k] !== null){ last = vals[k]; break; } }
+    var tv = document.getElementById("totalVal");
+    if (first !== null && last !== null && last >= first) {
+      tv.textContent = (last - first).toLocaleString();
+    } else {
+      tv.textContent = "—";
+    }
+    saveMeta();
+  }
+
+  // recompute on any input
+  document.addEventListener("input", function(e){
+    if (e.target && (e.target.id === "driver" || e.target.id === "bus" || e.target.tagName === "INPUT")) {
+      if (READINGS.some(function(r){ return r.id === e.target.id; })) recompute();
+      else saveMeta();
+    }
+  });
+  READINGS.forEach(function(r){ document.getElementById(r.id).addEventListener("input", recompute); });
+
+  // ---- Remember driver name + bus # between trips (silently skips if blocked) ----
+  function saveMeta(){
+    try {
+      localStorage.setItem("jbs_driver", document.getElementById("driver").value || "");
+      localStorage.setItem("jbs_bus", document.getElementById("bus").value || "");
+    } catch (e) {}
+  }
+  (function restoreMeta(){
+    try {
+      var d = localStorage.getItem("jbs_driver"); if (d) document.getElementById("driver").value = d;
+      var b = localStorage.getItem("jbs_bus"); if (b) document.getElementById("bus").value = b;
+    } catch (e) {}
+    document.getElementById("driver").addEventListener("input", saveMeta);
+    document.getElementById("bus").addEventListener("input", saveMeta);
+    // default the date to today
+    var dt = document.getElementById("date");
+    if (!dt.value) { dt.value = new Date().toISOString().slice(0,10); }
+  })();
+
+  // ---- Toast ----
+  var toastTimer;
+  function toast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+  }
+
+  // ---- Build a plain-text summary of the log ----
+  function buildSummary(){
+    var driver = document.getElementById("driver").value.trim() || "—";
+    var bus = document.getElementById("bus").value.trim() || "—";
+    var date = document.getElementById("date").value || "—";
+    var lines = [];
+    lines.push("JEAN'S BUS SERVICE — Mileage Log");
+    lines.push("Driver: " + driver + "   Bus #: " + bus + "   Date: " + date);
+    lines.push("");
+    var vals = READINGS.map(function(r){ return readVal(r.id); });
+    READINGS.forEach(function(r, i){
+      var v = vals[i];
+      lines.push(r.name + ": " + (v === null ? "—" : v.toLocaleString()));
+    });
+    lines.push("");
+    for (var i = 0; i < READINGS.length - 1; i++) {
+      var a = vals[i], b = vals[i+1];
+      if (a !== null && b !== null && b >= a) lines.push(LEG_LABELS[i] + ": " + (b-a).toLocaleString() + " mi");
+    }
+    var first=null,last=null;
+    for (var j=0;j<vals.length;j++){ if(vals[j]!==null){first=vals[j];break;} }
+    for (var k=vals.length-1;k>=0;k--){ if(vals[k]!==null){last=vals[k];break;} }
+    if (first!==null && last!==null && last>=first) {
+      lines.push("");
+      lines.push("TOTAL MILES: " + (last-first).toLocaleString());
+    }
+    return lines.join("\n");
+  }
+
+  // ---- Save / share ----
+  document.getElementById("shareBtn").addEventListener("click", function(){
+    var text = buildSummary();
+    if (navigator.share) {
+      navigator.share({ title: "Mileage Log", text: text }).catch(function(){});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ toast("Log copied — paste it anywhere"); },
+        function(){ fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  });
+  function fallbackCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("Log copied — paste it anywhere"); }
+    catch(e){ toast("Couldn't copy — long-press to select"); }
+    document.body.removeChild(ta);
+  }
+
+  // ---- Review request ----
+  document.getElementById("reviewBtn").addEventListener("click", function(){
+    var name = document.getElementById("cName").value.trim();
+    var phone = document.getElementById("cPhone").value.trim().replace(/\D/g, "");
+    var driver = document.getElementById("driver").value.trim() || "your driver";
+    if (!name) { toast("Enter the contact's name first"); return; }
+    if (!phone) { toast("Enter the contact's phone first"); return; }
+
+    toast("Preparing message…");
+    var go = function(link){
+      var msg = "Hi " + name + ", this is " + driver + " with Jean's Bus Service. It was truly a pleasure serving you today! " +
+        "If we met or exceeded your expectations, we'd be so grateful if you'd take a moment to leave us a 5-star Google review — " +
+        "it makes a huge difference for our small family business. Just tap the link, then tap the 5th star to get started: " +
+        link + ". Thank you so much!";
+      window.location.href = "sms:" + phone + "?body=" + encodeURIComponent(msg);
+    };
+    // Try to shorten the link; fall back to the full link if offline
+    var done = false;
+    var finish = function(link){ if (done) return; done = true; go(link); };
+    try {
+      fetch("https://tinyurl.com/api-create.php?url=" + encodeURIComponent(GOOGLE_REVIEW_LINK))
+        .then(function(r){ return r.ok ? r.text() : GOOGLE_REVIEW_LINK; })
+        .then(function(short){ finish(short); })
+        .catch(function(){ finish(GOOGLE_REVIEW_LINK); });
+      setTimeout(function(){ finish(GOOGLE_REVIEW_LINK); }, 2500); // don't hang on bad signal
+    } catch (e) { finish(GOOGLE_REVIEW_LINK); }
+  });
+
+  // ---- Vehicle issue ----
+  document.getElementById("issueBtn").addEventListener("click", function(){
+    var notes = document.getElementById("issue").value.trim();
+    if (!notes) { toast("Describe the issue first"); return; }
+    var driver = document.getElementById("driver").value.trim() || "a driver";
+    var bus = document.getElementById("bus").value.trim() || "—";
+    var date = document.getElementById("date").value || "today";
+    var msg = "Heads up from " + driver + " — Bus #" + bus + " on " + date + ". " +
+      "A few things I noticed or that the client mentioned (some may need attention, others minor): " +
+      notes + ". Thanks!";
+    window.location.href = "sms:" + MAINT_NUMBERS + "?body=" + encodeURIComponent(msg);
+  });
+
+  recompute();
+</script>
+</body>
+</html>
