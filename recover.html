@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip Tracker — Data Recovery</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       margin:0;padding:16px;background:#f4f5f2;color:#1b211c;line-height:1.45;}
+  h1{font-size:1.2rem;margin:6px 0 2px;}
+  .sub{color:#5c665b;font-size:.9rem;margin:0 0 18px;}
+  .block{background:#fff;border:1.5px solid #d6dcd2;border-radius:12px;padding:14px;margin-bottom:16px;}
+  .block h2{font-size:.95rem;margin:0 0 6px;}
+  .status{font-size:.9rem;font-weight:600;margin:0 0 10px;}
+  .found{color:#0b6e3b;}
+  .missing{color:#b3261e;}
+  textarea{width:100%;box-sizing:border-box;min-height:110px;font-family:Menlo,Consolas,monospace;
+           font-size:.75rem;border:1px solid #d6dcd2;border-radius:8px;padding:8px;background:#fafbf9;}
+  button{display:inline-block;border:none;border-radius:10px;background:#0b6e3b;color:#fff;
+         font-size:.95rem;font-weight:700;padding:11px 16px;margin:8px 8px 0 0;-webkit-appearance:none;}
+  button.secondary{background:#fff;color:#0b6e3b;border:1.5px solid #0b6e3b;}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1b211c;color:#fff;
+         padding:10px 16px;border-radius:999px;font-size:.85rem;opacity:0;transition:.25s;pointer-events:none;}
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<h1>Trip Tracker — Data Recovery</h1>
+<p class="sub">Read-only. This page shows what's saved in this browser on this device. It changes nothing.</p>
+
+<div class="block">
+  <h2>Trip queue (tripTracker_queue)</h2>
+  <p class="status" id="qStatus">Checking…</p>
+  <textarea id="qData" readonly></textarea>
+  <button onclick="copyIt('qData')">Copy</button>
+  <button class="secondary" onclick="shareIt('qData','trip-queue.json')">Share / Save</button>
+</div>
+
+<div class="block">
+  <h2>Autosaved form (tripTracker_autosave)</h2>
+  <p class="status" id="aStatus">Checking…</p>
+  <textarea id="aData" readonly></textarea>
+  <button onclick="copyIt('aData')">Copy</button>
+  <button class="secondary" onclick="shareIt('aData','autosave.json')">Share / Save</button>
+</div>
+
+<div class="block">
+  <h2>Address book (tripTracker_addressbook)</h2>
+  <p class="status" id="bStatus">Checking…</p>
+  <textarea id="bData" readonly></textarea>
+  <button onclick="copyIt('bData')">Copy</button>
+  <button class="secondary" onclick="shareIt('bData','addressbook.json')">Share / Save</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+function load(key, statusId, dataId, describe){
+  var st = document.getElementById(statusId);
+  var ta = document.getElementById(dataId);
+  var raw = null;
+  try { raw = localStorage.getItem(key); } catch(e){}
+  if (raw === null || raw === "") {
+    st.textContent = "Nothing stored under this key on this device.";
+    st.className = "status missing";
+    ta.value = "";
+    return;
+  }
+  ta.value = raw;
+  var extra = "";
+  try {
+    var parsed = JSON.parse(raw);
+    if (describe) extra = describe(parsed);
+  } catch(e){}
+  st.textContent = "FOUND — " + raw.length.toLocaleString() + " characters" + (extra ? " · " + extra : "");
+  st.className = "status found";
+}
+load("tripTracker_queue", "qStatus", "qData", function(p){
+  if (Array.isArray(p)) return p.length + " trip(s) in queue";
+  return "";
+});
+load("tripTracker_autosave", "aStatus", "aData", function(p){
+  var bits = [];
+  if (p && p.destination) bits.push("destination: " + p.destination);
+  if (p && p.client) bits.push("client: " + p.client);
+  return bits.join(", ");
+});
+load("tripTracker_addressbook", "bStatus", "bData", function(p){
+  if (Array.isArray(p)) return p.length + " contact(s)";
+  return "";
+});
+
+var toastTimer;
+function toast(msg){
+  var t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+}
+function copyIt(id){
+  var ta = document.getElementById(id);
+  if (!ta.value){ toast("Nothing to copy"); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(function(){ toast("Copied"); },
+      function(){ legacyCopy(ta); });
+  } else { legacyCopy(ta); }
+}
+function legacyCopy(ta){
+  ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+  try { document.execCommand("copy"); toast("Copied"); }
+  catch(e){ toast("Select the text and copy manually"); }
+}
+function shareIt(id, filename){
+  var val = document.getElementById(id).value;
+  if (!val){ toast("Nothing to share"); return; }
+  if (navigator.share){
+    var file = null;
+    try { file = new File([val], filename, { type: "application/json" }); } catch(e){}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: filename }).catch(function(){});
+      return;
+    }
+    navigator.share({ title: filename, text: val }).catch(function(){});
+    return;
+  }
+  copyIt(id);
+}
+</script>
+</body>
+</html>
