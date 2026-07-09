@@ -695,25 +695,6 @@
             <input type="text" id="client" placeholder="Core Soccer" oninput="autocompleteClient(this.value)" autocomplete="off">
             <div class="ac-dropdown" id="clientDropdown"></div>
         </div>
-        <div class="field ac-wrapper" style="margin-top: 14px;">
-            <label>Pickup Address</label>
-            <input type="text" id="pickupAddress" placeholder="301 North Elm St, High Point NC" oninput="autocompleteAddress('pickup', this.value)" autocomplete="off">
-            <div class="ac-dropdown" id="pickupDropdown"></div>
-        </div>
-        <div class="field ac-wrapper" style="margin-top: 14px;">
-            <label>Dropoff Address</label>
-            <input type="text" id="dropoffAddress" placeholder="106 Jefferson St S, Huntsville AL" oninput="autocompleteAddress('dropoff', this.value)" autocomplete="off">
-            <div class="ac-dropdown" id="dropoffDropdown"></div>
-        </div>
-        <div class="field" style="margin-top: 14px;">
-            <label style="display:flex; justify-content:space-between;">
-                <span>Route</span>
-                <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400;">Auto-filled — edit if GPS differs</span>
-            </label>
-            <input type="text" id="routeOverride" placeholder="e.g. I-85 S" autocomplete="off" oninput="onRouteEdit()">
-        </div>
-        <button type="button" class="action-btn visible" style="margin-top:10px; border-color:#3b82f6; color:#3b82f6;" onclick="getGoogleMapsRoute()" id="showRouteBtn">🗺️ Get Route</button>
-        <div id="claudeRouteStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
         <div class="field-row" style="margin-top: 14px;">
             <div class="field">
                 <label>Trip Type</label>
@@ -783,8 +764,6 @@
                 <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:6px; margin-top:2px;"><span style="font-weight:700;">Total Miles</span><span id="sumTotal" style="font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--accent);">—</span></div>
             </div>
         </div>
-        <button type="button" class="generate-btn" style="margin-top:12px; font-size:0.9rem; padding:12px;" onclick="calculateStateLines()" id="calcBtn">🔄 Calculate State Lines</button>
-        <div id="stateLinesStatus" style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:6px; display:none;"></div>
     </div>
 
     <!-- Daily Hours -->
@@ -857,7 +836,7 @@
         <div class="field" style="margin-top: 14px;">
             <label>Maintenance</label>
             <input type="text" id="maintenance" placeholder="Any vehicle issues" oninput="toggleTextBtn()">
-            <button type="button" class="action-btn text-btn" id="maintenanceTextBtn" onclick="textMaintenance()">💬 Text Johnny &amp; Robbie</button>
+            <button type="button" class="action-btn text-btn" id="maintenanceTextBtn" onclick="textMaintenance()">💬 Text Johnny &amp; Robby</button>
         </div>
     </div>
 
@@ -911,10 +890,6 @@
         </button>
     </div>
 
-    <button type="button" class="generate-btn" onclick="generateForms()">📄 Generate &amp; Preview Forms</button>
-
-    <button type="button" class="action-btn email-btn visible" style="max-width:500px; margin:0 auto 8px; display:block;" onclick="emailToJoLynn()">📧 Email Forms to JoLynn</button>
-
     <input type="file" id="addressBookInput" accept=".json" style="display:none;" onchange="restoreAddressBook(this)">
     <button type="button" class="action-btn visible" style="max-width:500px; margin:0 auto 8px; display:block; border-color:var(--border);" onclick="document.getElementById('addressBookInput').click()">📋 Restore Address Book</button>
     <button type="button" class="action-btn visible" style="max-width:500px; margin:0 auto 8px; display:block; border-color:var(--border);" onclick="backupAddressBook()">💾 Backup Address Book</button>
@@ -925,28 +900,8 @@
 
 </div>
 
-<!-- Preview Modal -->
-<div class="modal-overlay" id="previewModal">
-    <div class="modal-box">
-        <div class="modal-title">📄 Preview Forms</div>
-        <div class="modal-tabs">
-            <button class="modal-tab active" onclick="switchTab('mileage')">Mileage Log</button>
-            <button class="modal-tab" onclick="switchTab('charter')">Charter Form</button>
-        </div>
-        <div class="preview-content active" id="previewMileage"></div>
-        <div class="preview-content" id="previewCharter"></div>
-        <div class="modal-actions">
-            <button class="modal-download-btn" onclick="downloadForms()">⬇️ Download Both PDFs</button>
-            <button class="modal-close-btn" onclick="closePreview()">Close</button>
-        </div>
-    </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCnlLTTLjcUR-UX_8mC7ryzUjKJqMWR4NY&callback=initGoogleMaps" async defer></script>
 <script>
     // ── Theme Toggle ──
     const THEME_KEY = 'tripTracker_theme';
@@ -965,9 +920,7 @@
     // ── State ──
     let currentDivision = 'charter';
     let currentStatus = 'upcoming';
-    let stateLineData = [];
     let tripQueue = [];
-    let cachedPdfBlobs = null;   // { mileage: Blob, charter: Blob, mileageName, charterName }
 
     // ── Status Toggle ──
     function setStatus(status) {
@@ -1001,17 +954,16 @@
                 if (s.vehicle) document.getElementById('vehicle').value = s.vehicle;
                 if (s.destination) document.getElementById('client').value = s.destination;
                 if (s.client) document.getElementById('client').value = s.client;
-                if (s.pickupAddress) document.getElementById('pickupAddress').value = s.pickupAddress;
-                if (s.dropoffAddress) document.getElementById('dropoffAddress').value = s.dropoffAddress;
+                if (s.tripType) document.getElementById('tripType').value = s.tripType;
+                if (s.startDate) document.getElementById('startDate').value = s.startDate;
+                if (s.endDate) document.getElementById('endDate').value = s.endDate;
                 if (s.odometerAtPickup) document.getElementById('odometerAtPickup').value = s.odometerAtPickup;
                 if (s.odometerDropoff) document.getElementById('odometerDropoff').value = s.odometerDropoff;
                 if (s.odometerPickup) document.getElementById('odometerPickup').value = s.odometerPickup;
                 if (s.odometerAtReturnDropoff) document.getElementById('odometerAtReturnDropoff').value = s.odometerAtReturnDropoff;
-                if (s.tripType) document.getElementById('tripType').value = s.tripType;
-                if (s.startDate) document.getElementById('startDate').value = s.startDate;
-                if (s.endDate) document.getElementById('endDate').value = s.endDate;
                 if (s.beginMiles) document.getElementById('beginMiles').value = s.beginMiles;
                 if (s.endMiles) document.getElementById('endMiles').value = s.endMiles;
+                updateMileageSummary();
                 if (s.isRelay) document.getElementById('isRelay').value = s.isRelay;
                 if (s.tips !== undefined) document.getElementById('tips').value = s.tips;
                 if (s.mealExpenses !== undefined) document.getElementById('mealExpenses').value = s.mealExpenses;
@@ -1019,17 +971,9 @@
                 if (s.contactName) { document.getElementById('contactName').value = s.contactName; toggleReviewBtn(); }
                 if (s.contactPhone) { document.getElementById('contactPhone').value = s.contactPhone; toggleReviewBtn(); }
                 if (s.maintenance) { document.getElementById('maintenance').value = s.maintenance; toggleTextBtn(); }
-                if (s.routeOverride) document.getElementById('routeOverride').value = s.routeOverride;
                 if (s.tourBonusPerDay) document.getElementById('tourBonusPerDay').value = s.tourBonusPerDay;
                 if (s.division) { currentDivision = s.division; setDivision(s.division); }
                 if (s.trip_status) setStatus(s.trip_status);
-                if (s.stateLines && s.stateLines.length > 0) {
-                    stateLineData = s.stateLines;
-                    const status = document.getElementById('stateLinesStatus');
-                    status.style.display = 'block';
-                    status.style.color = 'var(--tour-green)';
-                    status.textContent = `✅ ${stateLineData.length} state lines loaded`;
-                }
                 // Restore hours grid
                 if (s.days && s.days.length > 0) {
                     const grid = document.getElementById('hoursGrid');
@@ -1050,7 +994,6 @@
                         grid.appendChild(row);
                     });
                 }
-                updateMiles();
                 recalc();
                 return; // Skip default date set
             }
@@ -1075,15 +1018,13 @@
                 driveNumber: document.getElementById('driveNumber').value,
                 vehicle: document.getElementById('vehicle').value,
                 client: document.getElementById('client').value,
-                pickupAddress: document.getElementById('pickupAddress').value,
-                dropoffAddress: document.getElementById('dropoffAddress').value,
+                tripType: document.getElementById('tripType').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
                 odometerAtPickup: document.getElementById('odometerAtPickup').value,
                 odometerDropoff: document.getElementById('odometerDropoff').value,
                 odometerPickup: document.getElementById('odometerPickup').value,
                 odometerAtReturnDropoff: document.getElementById('odometerAtReturnDropoff').value,
-                tripType: document.getElementById('tripType').value,
-                startDate: document.getElementById('startDate').value,
-                endDate: document.getElementById('endDate').value,
                 beginMiles: document.getElementById('beginMiles').value,
                 endMiles: document.getElementById('endMiles').value,
                 isRelay: document.getElementById('isRelay').value,
@@ -1093,9 +1034,7 @@
                 contactName: document.getElementById('contactName').value,
                 contactPhone: document.getElementById('contactPhone').value,
                 maintenance: document.getElementById('maintenance').value,
-                routeOverride: document.getElementById('routeOverride').value,
                 tourBonusPerDay: document.getElementById('tourBonusPerDay').value,
-                stateLines: getStateLineData(),
                 days: days
             };
             localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
@@ -1190,7 +1129,6 @@
         document.getElementById('sum4').textContent = s4 !== null ? s4 + ' mi' : '—';
         document.getElementById('sum5').textContent = s5 !== null ? s5 + ' mi' : '—';
         document.getElementById('sumTotal').textContent = total > 0 ? total + ' mi' : '—';
-        if (document.getElementById('totalMilesDisplay')) document.getElementById('totalMilesDisplay').textContent = total || 0;
     }
 
     function updateMiles() { updateMileageSummary(); autoSave(); }
@@ -1331,8 +1269,6 @@
             division: currentDivision,
             trip_status: currentStatus,
             client: dest,
-            pickup_address: document.getElementById('pickupAddress').value.trim(),
-            dropoff_address: document.getElementById('dropoffAddress').value.trim(),
             odometer_at_pickup: parseFloat(document.getElementById('odometerAtPickup').value) || null,
             odometer_dropoff: parseFloat(document.getElementById('odometerDropoff').value) || null,
             odometer_pickup_return: parseFloat(document.getElementById('odometerPickup').value) || null,
@@ -1363,8 +1299,6 @@
             contact_name: document.getElementById('contactName').value.trim() || null,
             contact_phone: document.getElementById('contactPhone').value.trim() || null,
             maintenance: document.getElementById('maintenance').value.trim() || null,
-            route_override: document.getElementById('routeOverride').value.trim() || null,
-            state_lines: getStateLineData(),
             added_timestamp: new Date().toISOString(),
             problem_days: problemDays,
             good_days: goodDays
@@ -1416,9 +1350,63 @@
         resetForm(true);
     }
 
+    // ── Safe export ──
+    // RULE: the app NEVER deletes a trip on its own. Export marks trips
+    // as exported (✓) but keeps them until YOU remove them.
+    // deliverJson resolves true only when the save/share actually completed.
+    async function deliverJson(data, filename) {
+        const blob = new Blob([data], { type: 'application/json' });
+        // Phone: share sheet with a real file (Save to Files, Mail, etc.).
+        // navigator.share resolves only when the user completes an action.
+        try {
+            const file = new File([blob], filename, { type: 'application/json' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: filename });
+                return true;
+            }
+        } catch (e) {
+            if (e && e.name === 'AbortError') return false;  // user backed out — NOT saved
+            // other share failure: fall through to plain download
+        }
+        // Desktop (or share unavailable): normal download to Downloads
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return true;
+    }
+
+    function tripFilename(trips) {
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        if (trips.length === 1) {
+            const safeDest = (trips[0].client || trips[0].destination || 'trip').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+            return `trip_${safeDest}_${ts}.json`;
+        }
+        return `trips_${trips.length}_${ts}.json`;
+    }
+
+    // ── Export ONE trip straight from the Saved Trips list (one tap) ──
+    async function exportOne(idx) {
+        const trip = tripQueue[idx];
+        if (!trip) return;
+        const data = JSON.stringify({ trips: [trip], address_book: loadAddressBook() }, null, 2);
+        const ok = await deliverJson(data, tripFilename([trip]));
+        if (ok) {
+            trip.exported = true;
+            try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
+            renderQueue();
+            showToast('✅ Trip exported — kept in list until you remove it');
+        } else {
+            showToast('Export cancelled — nothing changed');
+        }
+    }
+
     // ── Export All (queue + current if filled) ──
-    function exportAll() {
-        // Check if current form has data to include
+    async function exportAll() {
         const currentTrip = buildTripObject();
         const allTrips = [...tripQueue];
         if (currentTrip) allTrips.push(currentTrip);
@@ -1428,36 +1416,24 @@
             return;
         }
 
-        // Single trip = single object, multiple = wrapped in {trips: [...]}
-        // Address book is always embedded for automatic backup
-        let data, filename;
-        if (allTrips.length === 1) {
-            const safeDest = (allTrips[0].client || allTrips[0].destination || 'trip').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-            const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-            filename = `trip_${safeDest}_${ts}.json`;
-            data = JSON.stringify({ trips: allTrips, address_book: loadAddressBook() }, null, 2);
-        } else {
-            const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-            filename = `trips_${allTrips.length}_${ts}.json`;
-            data = JSON.stringify({ trips: allTrips, address_book: loadAddressBook() }, null, 2);
+        const data = JSON.stringify({ trips: allTrips, address_book: loadAddressBook() }, null, 2);
+        const ok = await deliverJson(data, tripFilename(allTrips));
+
+        if (!ok) {
+            showToast('Export cancelled — your trips are untouched');
+            return;   // nothing cleared, nothing changed
         }
 
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        // Clear queue after export
-        tripQueue = [];
-        try { localStorage.removeItem(QUEUE_KEY); } catch(e) {}
+        // Success: keep everything, just mark exported ✓
+        tripQueue.forEach(t => t.exported = true);
+        if (currentTrip) {
+            currentTrip.exported = true;
+            tripQueue.push(currentTrip);   // form trip moves into the visible list
+            resetForm(true);
+        }
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
         renderQueue();
-        resetForm(true);
-        showToast(`✅ ${allTrips.length} trip${allTrips.length > 1 ? 's' : ''} exported!`);
+        showToast(`✅ ${allTrips.length} trip${allTrips.length > 1 ? 's' : ''} exported — kept in list until you remove them`);
     }
 
     // ── Queue Display ──
@@ -1476,13 +1452,15 @@
         list.innerHTML = tripQueue.map((t, i) => {
             const statusLabel = t.trip_status === 'completed' ? 'Completed' : t.trip_status === 'inprogress' ? 'In Progress' : 'Upcoming';
             const statusClass = t.trip_status === 'completed' ? 'badge-completed' : t.trip_status === 'inprogress' ? 'badge-inprogress' : 'badge-upcoming';
+            const exportedTag = t.exported ? '<span class="status-badge badge-completed">✓ Exported</span>' : '';
             return `
             <div class="queue-item">
                 <div>
-                    <div class="qi-info">${t.client || t.destination}<span class="status-badge ${statusClass}">${statusLabel}</span></div>
+                    <div class="qi-info">${t.client || t.destination}<span class="status-badge ${statusClass}">${statusLabel}</span>${exportedTag}</div>
                     <div class="qi-detail">${t.start_date} · ${t.total_hours}h · $${t.net_earnings.toFixed(0)}</div>
                 </div>
                 <div class="qi-actions">
+                    <button class="qi-edit" onclick="exportOne(${i})" title="Export this trip">📤</button>
                     <button class="qi-edit" onclick="editFromQueue(${i})">✏️</button>
                     <button class="qi-remove" onclick="removeFromQueue(${i})">×</button>
                 </div>
@@ -1491,6 +1469,8 @@
     }
 
     function removeFromQueue(idx) {
+        const t = tripQueue[idx];
+        if (t && !t.exported && !confirm('⚠️ This trip has NOT been exported. Remove it anyway?')) return;
         tripQueue.splice(idx, 1);
         try { localStorage.setItem(QUEUE_KEY, JSON.stringify(tripQueue)); } catch(e) {}
         renderQueue();
@@ -1510,12 +1490,13 @@
         document.getElementById('vehicle').value = trip.vehicle || '';
         setStatus(trip.trip_status || 'upcoming');
         document.getElementById('client').value = trip.client || trip.destination || '';
-        document.getElementById('pickupAddress').value = trip.pickup_address || '';
-        document.getElementById('dropoffAddress').value = trip.dropoff_address || '';
         document.getElementById('odometerAtPickup').value = trip.odometer_at_pickup || '';
         document.getElementById('odometerDropoff').value = trip.odometer_dropoff || '';
         document.getElementById('odometerPickup').value = trip.odometer_pickup_return || '';
         document.getElementById('odometerAtReturnDropoff').value = trip.odometer_at_return_dropoff || '';
+        document.getElementById('beginMiles').value = trip.begin_miles || '';
+        document.getElementById('endMiles').value = trip.end_miles || '';
+        updateMileageSummary();
         document.getElementById('tripType').value = trip.trip_type || 'Day Trip';
         document.getElementById('isRelay').value = trip.is_relay ? 'true' : 'false';
         document.getElementById('endDate').value = trip.end_date || '';
@@ -1528,23 +1509,6 @@
         document.getElementById('maintenance').value = trip.maintenance || '';
         toggleTextBtn();
         document.getElementById('tourBonusPerDay').value = trip.tour_bonus_per_day || 150;
-        // Restore state lines
-        stateLineData = trip.state_lines || [];
-        const slStatus = document.getElementById('stateLinesStatus');
-        if (stateLineData.length > 0) {
-            slStatus.style.display = 'block';
-            slStatus.style.color = 'var(--tour-green)';
-            slStatus.textContent = `✅ ${stateLineData.length} state lines loaded`;
-        } else {
-            slStatus.style.display = 'none';
-        }
-        document.getElementById('routeOverride').value = trip.route_override || '';
-
-        // Restore miles
-        document.getElementById('beginMiles').value = trip.begin_miles || '';
-        document.getElementById('endMiles').value = trip.end_miles || '';
-        updateMiles();
-
         // Restore date
         if (trip.raw_date) {
             document.getElementById('startDate').value = trip.raw_date;
@@ -1590,6 +1554,12 @@
     }
 
     function clearQueue() {
+        const n = tripQueue.length;
+        if (n === 0) return;
+        const unexported = tripQueue.filter(t => !t.exported).length;
+        let msg = `Remove all ${n} saved trip${n > 1 ? 's' : ''}?`;
+        if (unexported > 0) msg = `⚠️ ${unexported} of these ${n} trips ha${unexported === 1 ? 's' : 've'} NOT been exported. Remove anyway?`;
+        if (!confirm(msg)) return;
         tripQueue = [];
         try { localStorage.removeItem(QUEUE_KEY); } catch(e) {}
         renderQueue();
@@ -1602,17 +1572,17 @@
         document.getElementById('vehicle').value = '';
         setStatus('upcoming');
         document.getElementById('client').value = '';
-        document.getElementById('pickupAddress').value = '';
-        document.getElementById('dropoffAddress').value = '';
+        document.getElementById('tripType').value = 'Day Trip';
+        document.getElementById('beginMiles').value = '';
         document.getElementById('odometerAtPickup').value = '';
         document.getElementById('odometerDropoff').value = '';
         document.getElementById('odometerPickup').value = '';
         document.getElementById('odometerAtReturnDropoff').value = '';
-        document.getElementById('tripType').value = 'Day Trip';
-        document.getElementById('beginMiles').value = '';
         document.getElementById('endMiles').value = '';
-        const tmd = document.getElementById('totalMilesDisplay');
-        if (tmd) tmd.textContent = '0';
+        ['sum1','sum2','sum3','sum4','sum5','sumTotal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        });
         document.getElementById('isRelay').value = 'false';
         document.getElementById('startDate').value = '';   // ← was being set to today
         document.getElementById('endDate').value = '';
@@ -1625,30 +1595,6 @@
         document.getElementById('maintenance').value = '';
         document.getElementById('maintenanceTextBtn').classList.remove('visible');
         document.getElementById('tourBonusPerDay').value = '150';
-        stateLineData = [];
-        document.getElementById('stateLinesStatus').style.display = 'none';
-        document.getElementById('stateLinesStatus').textContent = '';
-        document.getElementById('routeOverride').value = '';
-
-        // Reset mileage summary display
-        ['sum1','sum2','sum3','sum4','sum5','sumTotal'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '—';
-        });
-
-        // Clear preview modal content so old data doesn't flash if preview is reopened
-        const pm = document.getElementById('previewMileage');
-        const pc = document.getElementById('previewCharter');
-        if (pm) pm.innerHTML = '';
-        if (pc) pc.innerHTML = '';
-
-        // Clear cached PDF blobs (used by Email to JoLynn)
-        cachedPdfBlobs = null;
-
-        // Hide route status
-        const rs = document.getElementById('claudeRouteStatus');
-        if (rs) { rs.style.display = 'none'; rs.textContent = ''; }
-
         const grid = document.getElementById('hoursGrid');
         grid.innerHTML = `
             <div class="hours-row" data-day="1">
@@ -1662,7 +1608,6 @@
 
         setDivision('charter');
         recalc();
-        updateMileageSummary();
 
         // Clear auto-save
         try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e) {}
@@ -1717,13 +1662,11 @@
         const book = loadAddressBook();
         const existing = book.find(e => e.name.toLowerCase() === trip.client.toLowerCase());
         if (existing) {
-            if (trip.pickup_address) existing.pickup_address = trip.pickup_address;
-            if (trip.dropoff_address) existing.dropoff_address = trip.dropoff_address;
             if (trip.group_notes) existing.group_notes = trip.group_notes;
             if (trip.contact_name) existing.contact_name = trip.contact_name;
             if (trip.contact_phone) existing.contact_phone = trip.contact_phone;
         } else {
-            book.push({ name: trip.client, pickup_address: trip.pickup_address || '', dropoff_address: trip.dropoff_address || '', group_notes: trip.group_notes || '', contact_name: trip.contact_name || '', contact_phone: trip.contact_phone || '' });
+            book.push({ name: trip.client, group_notes: trip.group_notes || '', contact_name: trip.contact_name || '', contact_phone: trip.contact_phone || '' });
         }
         saveAddressBook(book);
     }
@@ -1734,7 +1677,7 @@
         if (!value || value.length < 2 || book.length === 0) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
         const matches = book.filter(e => e.name.toLowerCase().includes(value.toLowerCase()));
         if (matches.length === 0) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
-        dd.innerHTML = matches.map(e => `<div class="ac-item" onmousedown="selectClient('${e.name.replace(/'/g,"\\'")}')"><div class="ac-name">${e.name}</div>${e.pickup_address ? `<div class="ac-detail">${e.pickup_address}</div>` : ''}</div>`).join('');
+        dd.innerHTML = matches.map(e => `<div class="ac-item" onmousedown="selectClient('${e.name.replace(/'/g,"\\'")}')"><div class="ac-name">${e.name}</div>${(e.contact_name || e.contact_phone) ? `<div class="ac-detail">${[e.contact_name, e.contact_phone].filter(Boolean).join(' · ')}</div>` : ''}</div>`).join('');
         dd.style.display = 'block';
     }
 
@@ -1743,8 +1686,6 @@
         const entry = book.find(e => e.name === name);
         if (!entry) return;
         document.getElementById('client').value = entry.name;
-        if (entry.pickup_address) document.getElementById('pickupAddress').value = entry.pickup_address;
-        if (entry.dropoff_address) document.getElementById('dropoffAddress').value = entry.dropoff_address;
         if (entry.group_notes) document.getElementById('groupNotes').value = entry.group_notes;
         if (entry.contact_name) document.getElementById('contactName').value = entry.contact_name;
         if (entry.contact_phone) document.getElementById('contactPhone').value = entry.contact_phone;
@@ -1753,31 +1694,9 @@
         autoSave();
     }
 
-    function autocompleteAddress(type, value) {
-        const dropdownId = type === 'pickup' ? 'pickupDropdown' : 'dropoffDropdown';
-        const dd = document.getElementById(dropdownId);
-        const book = loadAddressBook();
-        if (!value || value.length < 3) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
-        const all = [];
-        book.forEach(e => {
-            if (e.pickup_address && !all.includes(e.pickup_address)) all.push(e.pickup_address);
-            if (e.dropoff_address && !all.includes(e.dropoff_address)) all.push(e.dropoff_address);
-        });
-        const matches = all.filter(a => a.toLowerCase().includes(value.toLowerCase()));
-        if (matches.length === 0) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
-        dd.innerHTML = matches.map(a => `<div class="ac-item" onmousedown="selectAddress('${type}','${a.replace(/'/g,"\\'")}')""><div class="ac-name">${a}</div></div>`).join('');
-        dd.style.display = 'block';
-    }
-
-    function selectAddress(type, address) {
-        document.getElementById(type === 'pickup' ? 'pickupAddress' : 'dropoffAddress').value = address;
-        document.getElementById(type === 'pickup' ? 'pickupDropdown' : 'dropoffDropdown').style.display = 'none';
-        autoSave();
-    }
-
     // Close dropdowns on click outside
     document.addEventListener('click', e => {
-        ['clientDropdown','pickupDropdown','dropoffDropdown'].forEach(id => {
+        ['clientDropdown'].forEach(id => {
             const dd = document.getElementById(id);
             if (dd && !dd.contains(e.target) && e.target.id !== id.replace('Dropdown','')) {
                 dd.style.display = 'none';
@@ -1828,694 +1747,12 @@
         const notes = document.getElementById('maintenance').value.trim();
         const client = document.getElementById('client').value.trim();
         const driveNum = document.getElementById('driveNumber').value.trim();
-        const pickup = document.getElementById('pickupAddress').value.trim();
-        const dropoff = document.getElementById('dropoffAddress').value.trim();
         const vehicle = document.getElementById('vehicle').value.trim();
-        const msg = `Hey guys, just a heads up on a few things I noticed or were mentioned by the client on this trip. FROM: ${pickup || '—'} TO: ${dropoff || '—'} on Bus #${vehicle || '—'}. Some may need attention, others might be minor — just want to keep you in the loop: ${notes}. Thanks!`;
-        window.location.href = `sms:8644447067,8644447068?body=${encodeURIComponent(msg)}`;
-    }
-
-    function onRouteEdit() {
-        // Just warn that state lines may need recalculating — don't clear existing data
-        if (stateLineData.length > 0) {
-            const status = document.getElementById('stateLinesStatus');
-            status.style.display = 'block';
-            status.style.color = 'var(--warning)';
-            status.textContent = '⚠️ Route changed — tap Calculate State Lines again';
-        }
-        autoSave();
-    }
-
-    // ── Google Maps init callback ──
-    let googleMapsReady = false;
-    function initGoogleMaps() {
-        googleMapsReady = true;
-    }
-
-    // ── Get Route via Google Maps ──
-    async function getGoogleMapsRoute() {
-        const destination = document.getElementById('dropoffAddress').value.trim();
-        const pickup = document.getElementById('pickupAddress').value.trim();
-        if (!pickup) { showToast('⚠️ Enter pickup address first'); return; }
-        if (!destination) { showToast('⚠️ Enter dropoff address first'); return; }
-
-        const btn = document.getElementById('showRouteBtn');
-        const status = document.getElementById('claudeRouteStatus');
-        btn.textContent = '⏳ Getting route...';
-        btn.disabled = true;
-        status.style.display = 'block';
-        status.style.color = 'var(--text-dim)';
-        status.textContent = 'Contacting Google Maps...';
-
-        if (!googleMapsReady || !window.google || !window.google.maps) {
-            status.style.color = 'var(--danger)';
-            status.textContent = '❌ Google Maps not loaded yet — try again in a moment';
-            btn.textContent = '🗺️ Get Route';
-            btn.disabled = false;
-            return;
-        }
-
-        try {
-            const directionsService = new google.maps.DirectionsService();
-            const result = await new Promise((resolve, reject) => {
-                directionsService.route({
-                    origin: pickup,
-                    destination: destination,
-                    travelMode: google.maps.TravelMode.DRIVING,
-                    avoidFerries: true
-                }, (result, gmStatus) => {
-                    if (gmStatus === 'OK') resolve(result);
-                    else reject(new Error(gmStatus));
-                });
-            });
-
-            const highways = extractHighwaysFromRoute(result);
-
-            if (highways) {
-                document.getElementById('routeOverride').value = highways;
-                onRouteEdit();
-                status.style.color = 'var(--tour-green)';
-                status.textContent = `✅ ${highways} — verify against your GPS`;
-                showToast('✅ Route from Google Maps');
-            } else {
-                throw new Error('No highways found in route');
-            }
-        } catch(e) {
-            status.style.color = 'var(--danger)';
-            status.textContent = `❌ ${e.message || 'Could not get route'} — check addresses and try again`;
-            console.error(e);
-        } finally {
-            btn.textContent = '🗺️ Get Route';
-            btn.disabled = false;
-        }
-    }
-
-    // ── Extract highway names from a Google Maps DirectionsResult ──
-    function extractHighwaysFromRoute(directionsResult) {
-        const route = directionsResult.routes[0];
-        const seen = new Set();
-        const highways = [];
-
-        function parseText(text) {
-            if (!text) return;
-            const pattern = /\b(I-\d+[A-Z]?|US[- ]\d+[A-Z]?)\s*([NSEW]|North|South|East|West)?\b/g;
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                const hwy = match[1].replace(/\s+/, '-').toUpperCase();
-                const rawDir = match[2] || '';
-                const dir = rawDir.length > 1 ? rawDir.charAt(0).toUpperCase() : rawDir.toUpperCase();
-                const key = dir ? `${hwy} ${dir}` : hwy;
-                if (!seen.has(key)) { seen.add(key); highways.push(key); }
-            }
-        }
-
-        // Scan all step instructions to capture every highway in order
-        for (const leg of route.legs) {
-            for (const step of leg.steps) {
-                if (!step.html_instructions) continue;
-                const instruction = step.html_instructions
-                    .replace(/<[^>]*>/g, ' ')
-                    .replace(/&nbsp;/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-                parseText(instruction);
-            }
-        }
-
-        // If step scanning found nothing, fall back to the summary
-        if (highways.length === 0 && route.summary) {
-            parseText(route.summary);
-        }
-
-        return highways.join(', ');
-    }
-
-    // ── Calculate State Lines via Claude API ──
-    async function calculateStateLines() {
-        const destination = document.getElementById('dropoffAddress').value.trim();
-        const pickup = document.getElementById('pickupAddress').value.trim();
-        const beginOdo = parseFloat(document.getElementById('beginMiles').value) || 0;
-        const routeOverride = document.getElementById('routeOverride').value.trim();
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        if (!destination) { showToast('⚠️ Enter dropoff address first'); return; }
-        if (!beginOdo) { showToast('⚠️ Enter beginning miles first'); return; }
-
-        const btn = document.getElementById('calcBtn');
-        const status = document.getElementById('stateLinesStatus');
-        btn.textContent = '⏳ Calculating...';
-        btn.disabled = true;
-        status.style.display = 'block';
-        status.style.color = 'var(--text-dim)';
-        status.textContent = 'Contacting Claude...';
-
-        const odoAtPickup = parseFloat(document.getElementById('odometerAtPickup').value) || null;
-        const odoDropoff = parseFloat(document.getElementById('odometerDropoff').value) || null;
-        const odoPickup = parseFloat(document.getElementById('odometerPickup').value) || null;
-        const odoReturnDropoff = parseFloat(document.getElementById('odometerAtReturnDropoff').value) || null;
-        const endOdo = parseFloat(document.getElementById('endMiles').value) || null;
-
-        // Tightened prompt:
-        //   - Uses ACTUAL pickup address as origin (not hardcoded lot)
-        //   - Enforces ORIGIN → DESTINATION direction
-        //   - Asks for ONLY the states actually crossed (no extras)
-        //   - Asks for BOTH outbound and return direction highway names (no regex flipping)
-        //   - Caps at 5 states to prevent runaway responses
-        const origin = pickup || 'Greenville, SC';
-        const prompt = `A professional bus driver is making a round trip.
-Origin: ${origin}.
-Destination: ${destination}.
-${routeOverride
-    ? `EXACT route taken (driver-confirmed): ${routeOverride}. Use ONLY these highways. Do NOT add I-26, I-77, I-95, I-40, I-20, or any other highway not on this list.`
-    : 'Use the single most direct interstate route a 56-passenger charter bus would take.'}
-
-Rules:
-1. List ONLY the states actually crossed, in geographic order from origin to destination.
-2. Do NOT include any state the route does not physically cross.
-3. Maximum 5 states.
-4. For each state give: state code, outbound-direction highway names (e.g. "I-85 S"), return-direction highway names (e.g. "I-85 N"), and approximate percentage of one-way miles in that state.
-5. Percentages across all states must sum to 100.
-
-Return ONLY valid JSON, no markdown, no commentary:
-{
-  "states": [
-    {"state": "SC", "highways_out": "I-85 S", "highways_back": "I-85 N", "pct": 35},
-    {"state": "GA", "highways_out": "I-85 S, I-285 W", "highways_back": "I-285 E, I-85 N", "pct": 65}
-  ],
-  "route_summary": "one short sentence"
-}`;
-
-        try {
-            const response = await fetch('https://bus-tracker-proxy.jaygrimaldo.workers.dev', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 600,
-                    messages: [{ role: 'user', content: prompt }]
-                })
-            });
-
-            const data = await response.json();
-            if (!data.content || !data.content[0]) throw new Error('No response');
-            const text = data.content[0].text.replace(/```json|```/g, '').trim();
-            const result = JSON.parse(text);
-            let states = result.states || [];
-
-            // Validate + sanitize: cap at 5 states, ensure required fields
-            states = states.slice(0, 5).filter(s => s && s.state && typeof s.pct === 'number');
-            if (states.length === 0) throw new Error('No valid states returned');
-
-            // Normalize percentages to sum to 100 (in case Claude is slightly off)
-            const pctSum = states.reduce((a, s) => a + s.pct, 0);
-            if (pctSum > 0 && Math.abs(pctSum - 100) > 0.1) {
-                states.forEach(s => { s.pct = (s.pct / pctSum) * 100; });
-            }
-
-            // Calculate odometers mathematically from actual readings
-            const outboundTotal = odoDropoff && beginOdo ? odoDropoff - beginOdo : 0;
-            const returnTotal = endOdo && odoPickup ? endOdo - odoPickup : 0;
-
-            // Build outbound rows
-            const outbound = [];
-            let runningOdo = beginOdo;
-            states.forEach((s, i) => {
-                const isLast = i === states.length - 1;
-                const miles = Math.round(outboundTotal * s.pct / 100);
-                const segMiles = isLast && odoDropoff ? Math.round(odoDropoff - runningOdo) : miles;
-                const segOdo = isLast && odoDropoff ? odoDropoff : runningOdo + miles;
-                outbound.push({
-                    date: startDate || '',
-                    state: s.state,
-                    highways: s.highways_out || s.highways || '',
-                    odometer: segOdo,
-                    miles: segMiles > 0 ? segMiles : miles
-                });
-                runningOdo = segOdo;
-            });
-
-            // Local miles at destination (only if positive)
-            const localMiles = odoPickup && odoDropoff ? odoPickup - odoDropoff : 0;
-            if (localMiles > 0) {
-                outbound.push({
-                    date: startDate || '',
-                    state: states[states.length - 1].state,
-                    highways: 'Local',
-                    odometer: odoPickup,
-                    miles: localMiles
-                });
-            }
-
-            // Return rows — use Claude's explicit return-direction highways (no regex flipping)
-            const returnStates = [...states].reverse();
-            const ret = [];
-            runningOdo = odoPickup || beginOdo;
-            returnStates.forEach((s, i) => {
-                const isLast = i === returnStates.length - 1;
-                const miles = Math.round(returnTotal * s.pct / 100);
-                const segMiles = isLast && endOdo ? Math.round(endOdo - runningOdo) : miles;
-                const segOdo = isLast && endOdo ? endOdo : runningOdo + miles;
-                // Prefer explicit return highways; fall back to flipped outbound only if missing
-                let highwaysBack = s.highways_back;
-                if (!highwaysBack) {
-                    const out = s.highways_out || s.highways || '';
-                    highwaysBack = out
-                        .replace(/\bS\b/g, '__N__').replace(/\bN\b/g, 'S').replace(/__N__/g, 'N')
-                        .replace(/\bW\b/g, '__E__').replace(/\bE\b/g, 'W').replace(/__E__/g, 'E');
-                }
-                ret.push({
-                    date: endDate || startDate || '',
-                    state: s.state,
-                    highways: highwaysBack,
-                    odometer: segOdo,
-                    miles: segMiles > 0 ? segMiles : miles
-                });
-                runningOdo = segOdo;
-            });
-
-            stateLineData = [...outbound, ...ret];
-
-            status.textContent = `✅ ${stateLineData.length} rows calculated — ${result.route_summary || states.map(s => s.state).join(' → ')}`;
-            status.style.color = 'var(--tour-green)';
-            showToast(`✅ State lines ready!`);
-            autoSave();
-
-        } catch(e) {
-            status.textContent = '❌ Error — check connection and try again';
-            status.style.color = 'var(--danger)';
-            showToast('❌ Calculation failed');
-            console.error(e);
-        } finally {
-            btn.textContent = '🔄 Calculate State Lines';
-            btn.disabled = false;
-        }
-    }
-
-    function getStateLineData() { return stateLineData; }
-
-    // ── Form Generation & Preview ──
-    function getFormData() {
-        const beginOdo = parseFloat(document.getElementById('beginMiles').value) || 0;
-        const odoAtPickup = parseFloat(document.getElementById('odometerAtPickup').value) || 0;
-        const odoDropoff = parseFloat(document.getElementById('odometerDropoff').value) || 0;
-        const odoPickup = parseFloat(document.getElementById('odometerPickup').value) || 0;
-        const odoReturnDropoff = parseFloat(document.getElementById('odometerAtReturnDropoff').value) || 0;
-        const endOdo = parseFloat(document.getElementById('endMiles').value) || 0;
-        return {
-            driveNumber: document.getElementById('driveNumber').value.trim(),
-            vehicle: document.getElementById('vehicle').value.trim(),
-            client: document.getElementById('client').value.trim(),
-            pickupAddress: document.getElementById('pickupAddress').value.trim(),
-            dropoffAddress: document.getElementById('dropoffAddress').value.trim(),
-            startDate: document.getElementById('startDate').value,
-            endDate: document.getElementById('endDate').value,
-            beginOdo, odoAtPickup, odoDropoff, odoPickup, odoReturnDropoff, endOdo,
-            legLotToPickup: odoAtPickup > beginOdo ? odoAtPickup - beginOdo : 0,
-            legPickupToDropoff: odoDropoff > odoAtPickup ? odoDropoff - odoAtPickup : 0,
-            legLocal: odoPickup > odoDropoff ? odoPickup - odoDropoff : 0,
-            legReturnToDropoff: odoReturnDropoff > odoPickup ? odoReturnDropoff - odoPickup : 0,
-            legDropoffToLot: endOdo > odoReturnDropoff ? endOdo - odoReturnDropoff : 0,
-            totalMiles: endOdo > beginOdo ? endOdo - beginOdo : 0,
-            stateLines: getStateLineData()
-        };
-    }
-
-    function generateForms() {
-        const d = getFormData();
-        if (!d.client) { showToast('⚠️ Enter a client name first'); return; }
-
-        // Build mileage log preview
-        let mlRows = stateLineData.map(row => `
-            <tr>
-                <td>${row.date || ''}</td><td>${row.state || ''}</td>
-                <td>${row.highways || ''}</td><td>${row.odometer || ''}</td>
-                <td style="text-align:center; font-weight:600;">${row.miles || ''}</td>
-            </tr>`).join('');
-        if (!mlRows) mlRows = '<tr><td colspan="5" style="text-align:center; color:#999; padding:12px;">⚠️ Tap Calculate State Lines first</td></tr>';
-
-        document.getElementById('previewMileage').innerHTML = `
-            <div class="preview-header">
-                <div class="preview-field"><label>Bus #</label><span>${d.vehicle || '—'}</span></div>
-                <div class="preview-field"><label>Charter #</label><span>${d.driveNumber || '—'}</span></div>
-                <div class="preview-field"><label>Driver</label><span>J.R. Grimaldo</span></div>
-                <div class="preview-field"><label>Client</label><span>${d.client}</span></div>
-                <div class="preview-field"><label>Origin</label><span>${d.pickupAddress || '—'}</span></div>
-                <div class="preview-field"><label>Destination</label><span>${d.dropoffAddress || '—'}</span></div>
-                <div class="preview-field"><label>Begin Date</label><span>${d.startDate || '—'}</span></div>
-                <div class="preview-field"><label>End Date</label><span>${d.endDate || '—'}</span></div>
-            </div>
-            <div class="preview-field" style="margin-bottom:10px;"><label>Beginning Trip Odometer</label><span>${d.beginOdo.toLocaleString()}</span></div>
-            <table class="preview-table">
-                <thead><tr><th>Date</th><th>State</th><th>Highways</th><th>Odometer</th><th>Miles</th></tr></thead>
-                <tbody>${mlRows}</tbody>
-            </table>`;
-
-        // Build charter form preview
-        document.getElementById('previewCharter').innerHTML = `
-            <div class="preview-header">
-                <div class="preview-field"><label>Bus #</label><span>${d.vehicle || '—'}</span></div>
-                <div class="preview-field"><label>Charter #</label><span>${d.driveNumber || '—'}</span></div>
-                <div class="preview-field"><label>Driver</label><span>J.R. Grimaldo</span></div>
-                <div class="preview-field"><label>Client</label><span>${d.client}</span></div>
-                <div class="preview-field"><label>Begin Date</label><span>${d.startDate || '—'}</span></div>
-                <div class="preview-field"><label>End Date</label><span>${d.endDate || '—'}</span></div>
-                <div class="preview-field"><label>Begin Odometer</label><span>${d.beginOdo.toLocaleString()}</span></div>
-                <div class="preview-field"><label>End Odometer</label><span>${d.endOdo.toLocaleString()}</span></div>
-            </div>
-            <table class="preview-table">
-                <thead><tr><th>Leg</th><th>Miles</th></tr></thead>
-                <tbody>
-                    <tr><td>Lot → First Pickup</td><td style="text-align:center; font-weight:600;">${d.legLotToPickup || '—'}</td></tr>
-                    <tr><td>Pickup → Dropoff</td><td style="text-align:center; font-weight:600;">${d.legPickupToDropoff || '—'}</td></tr>
-                    <tr><td>Local at Destination</td><td style="text-align:center; font-weight:600;">${d.legLocal || '—'}</td></tr>
-                    <tr><td>Return → Dropoff</td><td style="text-align:center; font-weight:600;">${d.legReturnToDropoff || '—'}</td></tr>
-                    <tr><td>Dropoff → Lot</td><td style="text-align:center; font-weight:600;">${d.legDropoffToLot || '—'}</td></tr>
-                    <tr style="background:var(--surface-2);"><td><strong>Total Miles</strong></td><td style="text-align:center; font-weight:700;">${d.totalMiles.toLocaleString()}</td></tr>
-                </tbody>
-            </table>`;
-
-        document.getElementById('previewModal').classList.add('open');
-    }
-
-    function switchTab(tab) {
-        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.preview-content').forEach(c => c.classList.remove('active'));
-        if (tab === 'mileage') {
-            document.querySelectorAll('.modal-tab')[0].classList.add('active');
-            document.getElementById('previewMileage').classList.add('active');
-        } else {
-            document.querySelectorAll('.modal-tab')[1].classList.add('active');
-            document.getElementById('previewCharter').classList.add('active');
-        }
-    }
-
-    function closePreview() {
-        document.getElementById('previewModal').classList.remove('open');
-    }
-
-    // ── Build Mileage Log PDF (jsPDF) ──
-    function buildMileageLogPdf(d) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-        const pageW = doc.internal.pageSize.getWidth();
-        const margin = 36;
-
-        // Title
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text("JEAN'S BUS SERVICE, INC.", pageW / 2, margin + 4, { align: 'center' });
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text('207 Furman Hall Road · Greenville, SC 29609 · 864-242-1673',
-            pageW / 2, margin + 20, { align: 'center' });
-
-        // Header grid (two columns)
-        let y = margin + 44;
-        doc.setFontSize(10);
-        const leftX = margin;
-        const rightX = pageW / 2 + 10;
-        const lh = 14;
-
-        const drawLabelVal = (x, yy, label, val) => {
-            doc.setFont('helvetica', 'bold');
-            doc.text(label + ':', x, yy);
-            const labelW = doc.getTextWidth(label + ':') + 4;
-            doc.setFont('helvetica', 'normal');
-            doc.text(String(val || '—'), x + labelW, yy);
-        };
-
-        drawLabelVal(leftX,  y,        'Bus #',       d.vehicle);
-        drawLabelVal(rightX, y,        'Driver',      'J.R. Grimaldo');
-        drawLabelVal(leftX,  y + lh,   'Charter #',   d.driveNumber);
-        drawLabelVal(rightX, y + lh,   'Client',      d.client);
-        drawLabelVal(leftX,  y + lh*2, 'Origin',      d.pickupAddress);
-        drawLabelVal(rightX, y + lh*2, 'Destination', d.dropoffAddress);
-        drawLabelVal(leftX,  y + lh*3, 'Begin Date',  d.startDate);
-        drawLabelVal(rightX, y + lh*3, 'End Date',    d.endDate);
-
-        y += lh * 4 + 6;
-
-        // Beginning odometer box
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.8);
-        doc.rect(margin, y, pageW - margin * 2, 24);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text('Mileage / Driver Log    Beginning Trip Odometer Reading: ' +
-            (d.beginOdo ? d.beginOdo.toLocaleString() : '—'),
-            margin + 8, y + 16);
-
-        y += 36;
-
-        // State lines table — autotable
-        const rows = (stateLineData && stateLineData.length > 0)
-            ? stateLineData.map(r => [
-                r.date || '',
-                r.state || '',
-                r.highways || '',
-                r.odometer != null ? String(r.odometer) : '',
-                r.miles != null ? String(r.miles) : ''
-            ])
-            : [['', '', 'No state lines calculated — tap Calculate State Lines first', '', '']];
-
-        doc.autoTable({
-            startY: y,
-            head: [['Date', 'State', 'Highways Used', 'Odometer', 'Total Miles']],
-            body: rows,
-            theme: 'grid',
-            styles: { fontSize: 9, cellPadding: 4 },
-            headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: 'bold' },
-            columnStyles: {
-                0: { cellWidth: 70 },
-                1: { cellWidth: 40, halign: 'center' },
-                2: { cellWidth: 'auto' },
-                3: { cellWidth: 70, halign: 'right' },
-                4: { cellWidth: 60, halign: 'center', fontStyle: 'bold' }
-            },
-            margin: { left: margin, right: margin }
-        });
-
-        // Signature lines
-        const sigY = doc.lastAutoTable.finalY + 60;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.8);
-        doc.line(margin, sigY, margin + 240, sigY);
-        doc.line(margin + 280, sigY, margin + 400, sigY);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text('Driver Signature', margin, sigY + 12);
-        doc.text('Date', margin + 280, sigY + 12);
-        doc.setFont('helvetica', 'italic');
-        doc.text('J.R. Grimaldo', margin, sigY + 28);
-
-        return doc.output('blob');
-    }
-
-    // ── Build Charter Form PDF (jsPDF) — mileage breakdown ──
-    function buildCharterFormPdf(d) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-        const pageW = doc.internal.pageSize.getWidth();
-        const margin = 36;
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text("CHARTER MILEAGE SUMMARY", pageW / 2, margin + 4, { align: 'center' });
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text("Jean's Bus Service, Inc. — 207 Furman Hall Road, Greenville, SC 29609",
-            pageW / 2, margin + 20, { align: 'center' });
-
-        let y = margin + 44;
-        const leftX = margin;
-        const rightX = pageW / 2 + 10;
-        const lh = 14;
-
-        const drawLabelVal = (x, yy, label, val) => {
-            doc.setFont('helvetica', 'bold');
-            doc.text(label + ':', x, yy);
-            const labelW = doc.getTextWidth(label + ':') + 4;
-            doc.setFont('helvetica', 'normal');
-            doc.text(String(val || '—'), x + labelW, yy);
-        };
-
-        doc.setFontSize(10);
-        drawLabelVal(leftX,  y,        'Bus #',         d.vehicle);
-        drawLabelVal(rightX, y,        'Driver',        'J.R. Grimaldo');
-        drawLabelVal(leftX,  y + lh,   'Charter #',     d.driveNumber);
-        drawLabelVal(rightX, y + lh,   'Client',        d.client);
-        drawLabelVal(leftX,  y + lh*2, 'Begin Date',    d.startDate);
-        drawLabelVal(rightX, y + lh*2, 'End Date',      d.endDate);
-        drawLabelVal(leftX,  y + lh*3, 'Begin Odo',     d.beginOdo ? d.beginOdo.toLocaleString() : '—');
-        drawLabelVal(rightX, y + lh*3, 'End Odo',       d.endOdo ? d.endOdo.toLocaleString() : '—');
-
-        y += lh * 4 + 12;
-
-        const rows = [
-            ['Lot → First Pickup',    d.legLotToPickup || 0],
-            ['Pickup → Dropoff',      d.legPickupToDropoff || 0],
-            ['Local at Destination',  d.legLocal || 0],
-            ['Return → Dropoff',      d.legReturnToDropoff || 0],
-            ['Dropoff → Lot',         d.legDropoffToLot || 0]
-        ].map(r => [r[0], String(r[1])]);
-
-        doc.autoTable({
-            startY: y,
-            head: [['Leg', 'Miles']],
-            body: rows,
-            foot: [['Total Miles', String(d.totalMiles || 0)]],
-            theme: 'grid',
-            styles: { fontSize: 10, cellPadding: 6 },
-            headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: 'bold' },
-            footStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold' },
-            columnStyles: {
-                0: { cellWidth: 'auto' },
-                1: { cellWidth: 100, halign: 'center', fontStyle: 'bold' }
-            },
-            margin: { left: margin, right: margin }
-        });
-
-        const sigY = doc.lastAutoTable.finalY + 60;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.8);
-        doc.line(margin, sigY, margin + 240, sigY);
-        doc.line(margin + 280, sigY, margin + 400, sigY);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text('Driver Signature', margin, sigY + 12);
-        doc.text('Date', margin + 280, sigY + 12);
-        doc.setFont('helvetica', 'italic');
-        doc.text('J.R. Grimaldo', margin, sigY + 28);
-
-        return doc.output('blob');
-    }
-
-    // ── Build BOTH PDFs and cache them, return the blobs + filenames ──
-    function buildBothPdfs() {
-        const d = getFormData();
-        if (!d.client) { showToast('⚠️ Enter client name first'); return null; }
-
-        // Sanity check on jsPDF
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            showToast('⚠️ PDF library not loaded — check your connection');
-            return null;
-        }
-
-        const safeClient = (d.client || 'trip').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
-        const safeDrive = (d.driveNumber || 'NA').replace(/[^a-zA-Z0-9]/g, '_');
-
-        const mileageBlob = buildMileageLogPdf(d);
-        const charterBlob = buildCharterFormPdf(d);
-
-        const mileageName = `Mileage_Log_${safeDrive}_${safeClient}.pdf`;
-        const charterName = `Charter_Form_${safeDrive}_${safeClient}.pdf`;
-
-        cachedPdfBlobs = {
-            mileage: mileageBlob,
-            charter: charterBlob,
-            mileageName,
-            charterName,
-            driveNumber: d.driveNumber,
-            client: d.client,
-            startDate: d.startDate,
-            vehicle: d.vehicle
-        };
-
-        return cachedPdfBlobs;
-    }
-
-    function downloadForms() {
-        const pdfs = buildBothPdfs();
-        if (!pdfs) return;
-
-        const mileageFile = new File([pdfs.mileage], pdfs.mileageName, { type: 'application/pdf' });
-        const charterFile = new File([pdfs.charter], pdfs.charterName, { type: 'application/pdf' });
-
-        // Prefer Web Share API on mobile — lets user save to Files, share to Mail, etc.
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [mileageFile, charterFile] })) {
-            navigator.share({
-                files: [mileageFile, charterFile],
-                title: 'Trip PDFs',
-                text: `Charter #${pdfs.driveNumber || ''} — ${pdfs.client || ''}`
-            })
-            .then(() => showToast('✅ PDFs shared'))
-            .catch(err => {
-                // User cancelled OR share failed — fall back to direct download
-                if (err && err.name !== 'AbortError') {
-                    triggerPdfDownload(pdfs);
-                }
-            });
-        } else {
-            triggerPdfDownload(pdfs);
-        }
-    }
-
-    function triggerPdfDownload(pdfs) {
-        // Direct download both files
-        downloadBlob(pdfs.mileage, pdfs.mileageName);
-        // Small delay so the second download isn't suppressed by the browser
-        setTimeout(() => {
-            downloadBlob(pdfs.charter, pdfs.charterName);
-            showToast('✅ Both PDFs downloaded');
-        }, 400);
-    }
-
-    function downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-
-    // ── Email to JoLynn ──
-    // mailto: cannot attach files (browser security). On iOS/Android the Web Share API CAN,
-    // because when the user picks "Mail" from the share sheet, the files are attached for them.
-    async function emailToJoLynn() {
-        const client = document.getElementById('client').value.trim() || '—';
-        const driveNum = document.getElementById('driveNumber').value.trim() || '—';
-        const startDate = document.getElementById('startDate').value || '—';
-        const vehicle = document.getElementById('vehicle').value.trim() || '—';
-        const subject = `Trip Log — Charter #${driveNum} — ${client}`;
-        const body = `Hi JoLynn,\n\nPlease find the trip log for:\n\nCharter #: ${driveNum}\nClient: ${client}\nBus #: ${vehicle}\nDate: ${startDate}\n\nThank you,\nJ.R. Grimaldo`;
-
-        // Always rebuild PDFs fresh — avoids stale cache if user edited the form after preview
-        const pdfs = buildBothPdfs();
-        if (!pdfs) return;
-
-        // Try Web Share API first — this is the ONLY way to attach files when launching mail
-        if (navigator.share && navigator.canShare) {
-            const mileageFile = new File([pdfs.mileage], pdfs.mileageName, { type: 'application/pdf' });
-            const charterFile = new File([pdfs.charter], pdfs.charterName, { type: 'application/pdf' });
-            const shareData = {
-                files: [mileageFile, charterFile],
-                title: subject,
-                text: body
-            };
-            if (navigator.canShare(shareData)) {
-                try {
-                    await navigator.share(shareData);
-                    showToast('✅ Shared — pick Mail to send to JoLynn');
-                    return;
-                } catch(err) {
-                    if (err && err.name === 'AbortError') return;
-                    // Otherwise fall through to mailto fallback
-                }
-            }
-        }
-
-        // Fallback: open mail with a body that tells the user to attach manually,
-        // and trigger downloads so the PDFs end up in their Files app.
-        triggerPdfDownload(pdfs);
-        const bodyWithNote = body + `\n\n(PDFs were just downloaded — please attach Mileage Log and Charter Form before sending.)`;
-        const mailtoLink = `mailto:jolynn@jeansbussvc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyWithNote)}`;
-        window.location.href = mailtoLink;
+        const msg = `Hey guys, just a heads up on a few things I noticed or were mentioned by the client on this trip (${client || '—'}, Charter #${driveNum || '—'}) on Bus #${vehicle || '—'}. Some may need attention, others might be minor — just want to keep you in the loop: ${notes}. Thanks!`;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        window.location.href = isIOS
+            ? `sms://open?addresses=8644447067,8644447068&body=${encodeURIComponent(msg)}`
+            : `sms:8644447067,8644447068?body=${encodeURIComponent(msg)}`;
     }
 
     // ── Scan Charter Form ──
@@ -2557,12 +1794,11 @@ Return ONLY valid JSON, no markdown, no commentary:
                                 text: `This is a charter order form from Jean's Bus Service. Extract exactly:
 1. Charter Order number (just the number, e.g. 19548)
 2. Client/Group name (the group or organization name, e.g. "Core Soccer")
-3. First pickup address (the first pickup location in the itinerary, including city and state)
-4. Driver name if visible
-5. Bus number if visible
+3. Driver name if visible
+4. Bus number if visible
 
 Respond ONLY with valid JSON, no markdown:
-{"charter_number": "...", "client": "...", "pickup_address": "...", "driver": "...", "bus_number": "..."}`
+{"charter_number": "...", "client": "...", "driver": "...", "bus_number": "..."}`
                             }
                         ]
                     }]
@@ -2583,10 +1819,6 @@ Respond ONLY with valid JSON, no markdown:
                 document.getElementById('client').value = result.client;
                 autocompleteClient(result.client);
                 filled.push('Client');
-            }
-            if (result.pickup_address) {
-                document.getElementById('pickupAddress').value = result.pickup_address;
-                filled.push('Pickup Address');
             }
             if (result.bus_number) {
                 document.getElementById('vehicle').value = result.bus_number;
@@ -2648,7 +1880,7 @@ Respond ONLY with valid JSON, no markdown:
 
     // ── Auto-advance to next field on Done/Return ──
     const fieldOrder = [
-        'driveNumber','vehicle','client','pickupAddress','dropoffAddress',
+        'driveNumber','vehicle','client',
         'startDate','endDate',
         'beginMiles','odometerAtPickup','odometerDropoff',
         'odometerPickup','odometerAtReturnDropoff','endMiles'
