@@ -150,6 +150,7 @@
     <p class="eyebrow">2021 Grand Design Transcend</p>
     <div class="odo" id="odo" aria-hidden="true"></div>
     <p class="odo-label">Total miles the trailer has rolled</p>
+    <p class="odo-label" id="syncMsg" style="font-size:13px;margin-top:6px;opacity:.8"></p>
     <p style="position:absolute;left:-9999px" id="odoText"></p>
   </div>
 </header>
@@ -170,21 +171,164 @@
 
 <script>
 /* =========================================================================
-   1. SAVING
-   On a normal website this uses the browser's own storage.
-   Inside Claude it uses Claude's storage instead.
+   1. SAVING AND SYNCING
+   Everything is kept locally so the app works with no signal.
+   Each piece of data is also its own row in the database, so two people
+   editing different things at the same time do not overwrite each other.
 ========================================================================= */
-const KEY = 'trailer-log-v2';
-const store = {
-  async get(){
-    if (window.storage){ try{ const r = await window.storage.get(KEY); return r ? r.value : null; }catch(e){ return null; } }
-    try { return localStorage.getItem(KEY); } catch(e){ return null; }
-  },
-  async set(v){
-    if (window.storage){ try{ await window.storage.set(KEY, v); }catch(e){} return; }
-    try { localStorage.setItem(KEY, v); } catch(e){}
-  }
+const CLOUD = {
+  url:   'https://wojzaavwrkttwxzydong.supabase.co',
+  key:   'sb_publishable_9_EUnkC32s8WkhTa5qHVbA_q2y3UWwH',
+  table: 'trailer_rows'
 };
+const KEY = 'trailer-log-v3';
+
+let mirror = {};              /* id -> {b:body, ts:when it changed, d:deleted} */
+let dirty  = new Set();       /* ids waiting to go up */
+let syncMsg = '';
+
+const local = {
+  get(){ try { return localStorage.getItem(KEY); } catch(e){ return null; } },
+  set(v){ try { localStorage.setItem(KEY, v); } catch(e){} }
+};
+function saveLocal(){ local.set(JSON.stringify(mirror)); }
+
+/* ---- turning the data into rows and back again ---------------------- */
+function buildRows(){
+  const rows = {};
+  data.trips.forEach(t => {
+    const copy = Object.assign({}, t);
+    delete copy.stops; delete copy.fuel;
+    rows['trip:' + t.id] = copy;
+    (t.stops || []).forEach((s,i) => { rows['stop:' + s.id] = Object.assign({_trip:t.id, _seq:i}, s); });
+    (t.fuel  || []).forEach(f    => { rows['fill:' + f.id] = Object.assign({_trip:t.id}, f); });
+  });
+  data.records.forEach(r => { rows['rec:' + r.id] = r; });
+  rows['meta:custom'] = data.custom;
+  rows['meta:ticks']  = data.ticks;
+  return rows;
+}
+function rebuildFromMirror(){
+  const trips = {}, stops = [], fills = [], records = [];
+  let custom = {}, ticks = {};
+  for (const id in mirror){
+    const r = mirror[id];
+    if (!r || r.d || r.b == null) continue;
+    if (id.indexOf('trip:') === 0)      trips[id.slice(5)] = Object.assign({}, r.b, {stops:[], fuel:[]});
+    else if (id.indexOf('stop:') === 0) stops.push(r.b);
+    else if (id.indexOf('fill:') === 0) fills.push(r.b);
+    else if (id.indexOf('rec:')  === 0) records.push(r.b);
+    else if (id === 'meta:custom')      custom = r.b || {};
+    else if (id === 'meta:ticks')       ticks  = r.b || {};
+  }
+  stops.sort((a,b) => (a._seq||0) - (b._seq||0));
+  stops.forEach(s => {
+    const t = trips[s._trip];
+    if (!t) return;
+    const c = Object.assign({}, s); delete c._trip; delete c._seq;
+    t.stops.push(c);
+  });
+  fills.forEach(f => {
+    const t = trips[f._trip];
+    if (!t) return;
+    const c = Object.assign({}, f); delete c._trip;
+    t.fuel.push(c);
+  });
+  data = { trips:Object.values(trips), records, custom, ticks };
+}
+
+/* ---- saving: work out what changed, then send only that ------------- */
+async function save(){
+  const rows = buildRows();
+  const now = Date.now();
+  for (const id in rows){
+    const cur = mirror[id];
+    if (!cur || cur.d || JSON.stringify(cur.b) !== JSON.stringify(rows[id])){
+      mirror[id] = {b:rows[id], ts:now, d:false};
+      dirty.add(id);
+    }
+  }
+  for (const id in mirror){
+    if (!(id in rows) && !mirror[id].d){
+      mirror[id] = {b:null, ts:now, d:true};
+      dirty.add(id);
+    }
+  }
+  saveLocal();
+  push();
+}
+
+/* ---- talking to the database ---------------------------------------- */
+function cloudOn(){ return !!(CLOUD.url && CLOUD.key); }
+function headers(extra){
+  return Object.assign({
+    'apikey': CLOUD.key,
+    'Authorization': 'Bearer ' + CLOUD.key,
+    'Content-Type': 'application/json'
+  }, extra || {});
+}
+function setSync(msg){ syncMsg = msg; const el = $('syncMsg'); if (el) el.textContent = msg; }
+
+let pushing = false;
+async function push(){
+  if (!cloudOn() || pushing || !dirty.size) return;
+  pushing = true;
+  const ids = [...dirty].filter(id => mirror[id]);
+  [...dirty].forEach(id => { if (!mirror[id]) dirty.delete(id); });
+  if (!ids.length){ pushing = false; return; }
+  const payload = ids.map(id => ({id, body:mirror[id].b, ts:mirror[id].ts, deleted:!!mirror[id].d}));
+  try {
+    setSync('Saving\u2026');
+    const res = await fetch(CLOUD.url + '/rest/v1/' + CLOUD.table,
+      {method:'POST', headers:headers({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+       body:JSON.stringify(payload)});
+    if (!res.ok) throw new Error(await res.text());
+    ids.forEach(id => dirty.delete(id));
+    setSync('Saved to the cloud');
+  } catch(e){
+    setSync('Saved on this device. Will sync when there is signal.');
+  }
+  pushing = false;
+  if (dirty.size) setTimeout(push, 8000);
+}
+
+let pulling = false;
+async function pull(){
+  if (!cloudOn() || pulling) return;
+  /* never redraw underneath someone who is typing */
+  if (ui.form || ui.editStop || ui.fuelFor) return;
+  pulling = true;
+  try {
+    const res = await fetch(CLOUD.url + '/rest/v1/' + CLOUD.table + '?select=id,body,ts,deleted',
+      {headers:headers()});
+    if (!res.ok) throw new Error(await res.text());
+    const remote = await res.json();
+    let changed = false;
+    const seen = {};
+    remote.forEach(r => {
+      seen[r.id] = r.ts;
+      const cur = mirror[r.id];
+      if (!cur || r.ts > cur.ts){
+        mirror[r.id] = {b:r.body, ts:r.ts, d:!!r.deleted};
+        changed = true;
+      }
+    });
+    /* anything we hold that the database has not seen yet */
+    for (const id in mirror){
+      if (!(id in seen) || mirror[id].ts > seen[id]) dirty.add(id);
+    }
+    if (changed){
+      rebuildFromMirror();
+      saveLocal();
+      render();
+    }
+    setSync(dirty.size ? 'Saving\u2026' : 'Up to date');
+    push();
+  } catch(e){
+    setSync('No connection. Working from this device.');
+  }
+  pulling = false;
+}
 
 /* =========================================================================
    2. THE TRIPS ALREADY ON THE PAPER LOG
@@ -1203,8 +1347,8 @@ function render(){
   renderDue();
   renderSchedule();
   renderReports();
+  const el = $('syncMsg'); if (el) el.textContent = syncMsg;
 }
-async function save(){ await store.set(JSON.stringify(data)); }
 
 const PANELS = {trips:'panel-trips', due:'panel-due', sched:'panel-sched', report:'panel-report'};
 function showTab(which){
@@ -1338,17 +1482,64 @@ fileInput.addEventListener('change', async e => {
 });
 
 /* ---- start up ------------------------------------------------------ */
+/* anything saved by the older version is carried over on first run */
+function carryOverOldData(){
+  let raw = null;
+  try { raw = localStorage.getItem('trailer-log-v2') || localStorage.getItem('trailer-log-v1'); }
+  catch(e){ return false; }
+  if (!raw) return false;
+  let old;
+  try { old = JSON.parse(raw); } catch(e){ return false; }
+  if (!old || !Array.isArray(old.trips) || !old.trips.length) return false;
+
+  data = {
+    trips: old.trips.map(t => Object.assign({stops:[], fuel:[]}, t)),
+    records: old.records || [],
+    custom: old.custom || {},
+    ticks: old.ticks || {}
+  };
+  /* the oldest version kept one date per job instead of a history */
+  if (!old.records && old.done){
+    for (const id in old.done){
+      const d = old.done[id];
+      if (!d || !d.date) continue;
+      data.records.push({id:uid('r'), taskId:id, what:(TASK[id] ? TASK[id].area + ' \u2014 ' + TASK[id].what : id),
+        date:d.date, miles:d.miles, who:'', cost:null, notes:''});
+    }
+  }
+  const rows = buildRows();
+  const now = Date.now();
+  for (const id in rows){ mirror[id] = {b:rows[id], ts:now, d:false}; dirty.add(id); }
+  saveLocal();
+  return true;
+}
+
 (async function start(){
-  const raw = await store.get();
+  const raw = local.get();
   if (raw){
-    try { data = JSON.parse(raw); } catch(e){ data = {trips:[],records:[],custom:{},ticks:{}}; }
-    data.trips = data.trips || []; data.records = data.records || [];
-    data.custom = data.custom || {}; data.ticks = data.ticks || {};
-  } else {
-    data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], closed:true}, s));
+    try { mirror = JSON.parse(raw) || {}; } catch(e){ mirror = {}; }
+  }
+  let carried = false;
+  if (!Object.keys(mirror).length) carried = carryOverOldData();
+  rebuildFromMirror();
+
+  if (!data.trips.length && !data.records.length && !carried){
+    data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], fuel:[], closed:true}, s));
     await save();
   }
   render();
+
+  if (cloudOn()){
+    setSync('Checking the cloud\u2026');
+    await pull();
+    setInterval(() => { if (document.visibilityState === 'visible') pull(); }, 20000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') pull();
+    });
+    window.addEventListener('online', pull);
+  } else {
+    setSync('This device only. No cloud set up.');
+  }
 })();
 </script>
 </body>
