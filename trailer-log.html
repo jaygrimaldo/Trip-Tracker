@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trailer Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pine:#22301F; --sign:#3E5641; --cream:#EFE9DA; --paper:#FBF8F1;
+    --amber:#E8A33D; --rust:#B4543A; --alum:#C9CCC2; --line:#D6CFBD; --gold:#8A6A1F;
+    --slab:'Zilla Slab', Rockwell, Georgia, serif;
+    --body:'Source Sans 3', system-ui, -apple-system, sans-serif;
+    --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--cream);color:var(--pine);font-family:var(--body);font-size:17px;line-height:1.5;-webkit-text-size-adjust:100%}
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px 72px}
+
+  /* header */
+  .masthead{background:var(--sign);color:var(--cream);padding:26px 16px 22px;border-bottom:5px solid var(--pine)}
+  .masthead-inner{max-width:760px;margin:0 auto;text-align:center}
+  .eyebrow{font-weight:600;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--alum);margin:0 0 14px}
+  .odo{display:flex;justify-content:center;gap:4px;margin-bottom:12px}
+  .cell{width:44px;height:62px;background:var(--pine);border-radius:4px;overflow:hidden;position:relative;box-shadow:inset 0 3px 7px rgba(0,0,0,.55)}
+  .cell.comma{width:17px;background:transparent;box-shadow:none}
+  .cell.comma span{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:33px;color:var(--amber)}
+  .strip{position:absolute;top:0;left:0;right:0;transition:transform 900ms cubic-bezier(.16,.84,.34,1)}
+  .strip div{height:62px;line-height:62px;text-align:center;font-family:var(--mono);font-weight:600;font-size:35px;color:var(--paper)}
+  .odo-label{font-family:var(--slab);font-weight:500;font-size:15px;color:var(--alum);margin:0}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin:18px 0 18px}
+  .tab{flex:1;padding:11px 4px;border:2px solid var(--pine);border-radius:6px;background:transparent;color:var(--pine);font-family:var(--slab);font-weight:700;font-size:15px;cursor:pointer;line-height:1.2}
+  .tab[aria-selected="true"]{background:var(--pine);color:var(--cream)}
+  .tab .dot{display:inline-block;background:var(--rust);color:#fff;border-radius:999px;font-family:var(--body);font-size:11px;font-weight:600;padding:0 6px;margin-left:4px;vertical-align:2px}
+  .tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+  /* cards */
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:18px}
+  .card.alert{border:2px solid var(--rust)}
+  .card.live{border:2px solid var(--sign)}
+  h2{font-family:var(--slab);font-weight:700;font-size:22px;margin:0 0 4px}
+  h3{font-family:var(--slab);font-weight:700;font-size:16px;margin:24px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--pine)}
+  h3:first-child{margin-top:0}
+  .hint{font-size:15px;color:#5C6656;margin:0 0 16px}
+  .hint.tight{margin:0 0 8px}
+
+  label{display:block;font-weight:600;font-size:15px;margin:16px 0 5px}
+  .field:first-child label{margin-top:0}
+  input[type=text],input[type=date],input[type=number],select,textarea{
+    width:100%;padding:11px 12px;font-size:17px;border:1px solid var(--line);
+    border-radius:5px;background:#fff;font-family:var(--body);color:var(--pine)}
+  input[type=number]{font-family:var(--mono);letter-spacing:.03em}
+  textarea{line-height:1.5;resize:vertical;min-height:100px}
+  .pair{display:flex;gap:12px}
+  .pair>div{flex:1;min-width:0}
+  .boxes{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .boxes label{display:flex;align-items:center;gap:7px;margin:0;font-weight:400;font-size:16px;
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px 7px 10px;cursor:pointer}
+  .boxes input{width:20px;height:20px;margin:0;flex:none}
+  .boxes label:has(input:checked){background:var(--sign);color:var(--paper);border-color:var(--sign)}
+
+  .btn{width:100%;padding:14px;margin-top:16px;background:var(--sign);color:var(--cream);border:none;
+    border-radius:6px;font-family:var(--slab);font-weight:700;font-size:18px;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--pine);border:2px solid var(--pine)}
+  .btn.small{padding:11px;font-size:16px}
+  .btn.danger{background:var(--rust)}
+  .btnrow{display:flex;gap:10px}
+  .btnrow .btn{flex:1}
+
+  .readout{background:var(--pine);color:var(--paper);border-radius:6px;padding:12px 14px;margin:16px 0 4px;
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .readout span{font-size:15px}
+  .readout strong{font-family:var(--mono);font-weight:600;font-size:24px;color:var(--amber)}
+  .warn{color:var(--rust);font-weight:600;font-size:15px;margin:10px 0 0}
+
+  /* rows */
+  .row{border-bottom:1px solid var(--line);padding:14px 0}
+  .row:last-child{border-bottom:none}
+  .row-top{display:flex;gap:14px;align-items:flex-start}
+  .miles{font-family:var(--mono);font-weight:600;font-size:20px;min-width:70px;text-align:right;padding-top:2px}
+  .where{font-family:var(--slab);font-weight:700;font-size:18px;margin:0;line-height:1.25}
+  .when{font-size:15px;color:#5C6656;margin:2px 0 0}
+  .detail{font-family:var(--mono);font-size:13px;color:#6C7268;margin:6px 0 0;line-height:1.7}
+  .notes{font-size:16px;margin:8px 0 0;white-space:pre-wrap;border-left:3px solid var(--line);padding-left:12px;color:#3B4738}
+  .acts{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+  .link{background:none;border:none;padding:0;cursor:pointer;font-family:var(--body);font-size:15px;font-weight:600;color:var(--sign);text-decoration:underline}
+  .link.danger{color:var(--rust)}
+  .empty{text-align:center;padding:26px 10px;color:#5C6656;font-size:16px;border:2px dashed var(--line);border-radius:8px}
+
+  .tag{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    border-radius:3px;padding:1px 7px;margin-left:6px;vertical-align:2px;color:#6C7268;border:1px solid var(--line)}
+  .tag.yes{background:var(--sign);color:var(--paper);border-color:var(--sign)}
+  .tag.maybe{background:var(--gold);color:var(--paper);border-color:var(--gold)}
+  .tag.no{background:var(--rust);color:var(--paper);border-color:var(--rust)}
+  .tag.pro{background:var(--sign);color:var(--paper);border-color:var(--sign)}
+
+  /* maintenance */
+  .job{border-bottom:1px solid var(--line);padding:13px 0}
+  .job:last-child{border-bottom:none}
+  .job-area{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#6C7268;margin:0}
+  .job-what{font-size:17px;margin:2px 0 0}
+  .job-when{font-size:15px;margin:5px 0 0}
+  .job-when.late{color:var(--rust);font-weight:600}
+  .job-when.soon{color:var(--gold);font-weight:600}
+  .job-when.ok,.job-when.never{color:#5C6656}
+  .tick{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .tick:last-of-type{border-bottom:none}
+  .tick input{width:24px;height:24px;flex:none;margin-top:1px}
+  .tick span{font-size:16px}
+  .tick input:checked + span{color:#8A9186;text-decoration:line-through}
+
+  /* stats */
+  .stat{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .stat:last-child{border-bottom:none}
+  .stat span{font-size:16px}
+  .stat strong{font-family:var(--mono);font-weight:600;font-size:19px;white-space:nowrap}
+  .bar-row{margin:11px 0}
+  .bar-label{display:flex;justify-content:space-between;font-size:15px;margin-bottom:4px}
+  .bar-label strong{font-family:var(--mono);font-weight:600}
+  .bar{height:12px;background:var(--line);border-radius:3px;overflow:hidden}
+  .bar div{height:100%;background:var(--sign)}
+
+  .hidden{display:none}
+  @media (prefers-reduced-motion:reduce){.strip{transition:none}}
+  @media (max-width:430px){
+    .cell{width:36px;height:54px}
+    .strip div{height:54px;line-height:54px;font-size:29px}
+    .cell.comma{width:14px}
+    .pair{flex-direction:column;gap:0}
+    .tab{font-size:13px;padding:10px 2px}
+    .btnrow{flex-direction:column;gap:0}
+  }
+  @media print{
+    .masthead,.tabs,.btn,.link,.acts,.no-print{display:none !important}
+    body{background:#fff;font-size:12pt}
+    .card{border:none;padding:0;margin-bottom:18px;background:#fff}
+    .hidden{display:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="eyebrow">2021 Grand Design Transcend</p>
+    <div class="odo" id="odo" aria-hidden="true"></div>
+    <p class="odo-label">Total miles the trailer has rolled</p>
+    <p style="position:absolute;left:-9999px" id="odoText"></p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-trips"  role="tab" aria-selected="true">Trips</button>
+    <button class="tab" id="tab-due"    role="tab" aria-selected="false">Due</button>
+    <button class="tab" id="tab-sched"  role="tab" aria-selected="false">Schedule</button>
+    <button class="tab" id="tab-report" role="tab" aria-selected="false">Reports</button>
+  </div>
+
+  <section id="panel-trips" role="tabpanel"><div id="tripsBox"></div></section>
+  <section id="panel-due" role="tabpanel" class="hidden"><div id="dueBox"></div></section>
+  <section id="panel-sched" role="tabpanel" class="hidden"><div id="schedBox"></div></section>
+  <section id="panel-report" role="tabpanel" class="hidden"><div id="reportBox"></div></section>
+</div>
+
+<script>
+/* =========================================================================
+   1. SAVING
+   On a normal website this uses the browser's own storage.
+   Inside Claude it uses Claude's storage instead.
+========================================================================= */
+const KEY = 'trailer-log-v2';
+const store = {
+  async get(){
+    if (window.storage){ try{ const r = await window.storage.get(KEY); return r ? r.value : null; }catch(e){ return null; } }
+    try { return localStorage.getItem(KEY); } catch(e){ return null; }
+  },
+  async set(v){
+    if (window.storage){ try{ await window.storage.set(KEY, v); }catch(e){} return; }
+    try { localStorage.setItem(KEY, v); } catch(e){}
+  }
+};
+
+/* =========================================================================
+   2. THE TRIPS ALREADY ON THE PAPER LOG
+   These have miles and dates but no campground detail.
+========================================================================= */
+const SEED = [
+  { name:'Sycamore Resort, NC',             startDate:'2021-05-02', endDate:'2021-05-02', oldMiles:380  },
+  { name:'Huntington Beach, SC',            startDate:'2021-06-01', endDate:'2021-06-04', oldMiles:532  },
+  { name:'Cloudland Canyon State Park, GA', startDate:'2021-08-01', endDate:'2021-08-06', oldMiles:584  },
+  { name:'Gettysburg, PA',                  startDate:'2021-10-11', endDate:'2021-10-14', oldMiles:1024 },
+  { name:'Miami, FL and stops around Florida',                 startDate:'2021-12-14', endDate:'2022-01-13', oldMiles:1546 },
+  { name:'Rocky Fork RV Resort, Kimbolton, OH and stops home', startDate:'2022-06-01', endDate:'2022-06-10', oldMiles:980  },
+  { name:'Ebenezer Park, NC',               startDate:'2022-11-23', endDate:'2022-11-26', oldMiles:178  },
+  { name:'Kansas City, MO and stops home',  startDate:'2023-05-12', endDate:'2023-05-30', oldMiles:2000 },
+  { name:'Crescent City, FL',               startDate:'2023-10-24', endDate:'2023-10-30', oldMiles:964  },
+  { name:'Myrtle Beach, SC',                startDate:'2024-05-25', endDate:'2024-06-04', oldMiles:540  },
+  { name:'Amicalola',                       startDate:'',           endDate:'',           oldMiles:350  },
+  { name:'Huntington Beach, SC',            startDate:'2024-09-30', endDate:'2024-10-05', oldMiles:540  }
+];
+
+/* =========================================================================
+   3. THE MAINTENANCE SCHEDULE
+   Taken from the Required Maintenance Schedule in the Grand Design
+   Transcend travel trailer owner's manual.
+     days  = how often, in days. null means trip or storage only.
+     miles = also comes due after this many trailer miles.
+     trip  = also do it every trip.
+     store = also do it before and after the trailer sits in storage.
+     pro   = a shop or dealer should do this one.
+========================================================================= */
+const TASKS = [
+  {id:'a1', area:'Appliances',        what:'Have the settings and adjustments checked against the maker\u2019s guide', days:365, store:1, pro:1},
+  {id:'a2', area:'Appliances',        what:'Make sure the burner tubes and vents are clean and clear', days:30, store:1},
+  {id:'a3', area:'Appliances',        what:'Clean and sanitize them', days:365, store:1},
+  {id:'w1', area:'Awning',            what:'Wash it with warm water and mild soap', days:null, store:1},
+  {id:'w2', area:'Awning',            what:'Clean the moving parts and spray on dry lube', days:365, store:1},
+  {id:'x1', area:'Axles and springs', what:'Check the U-bolts, springs and hangers for damage', days:null, store:1},
+  {id:'x2', area:'Axles and springs', what:'Check that every bolt is tight to the maker\u2019s spec', days:365, store:1},
+  {id:'b1', area:'Outside storage doors', what:'Check they seal tight and are not leaking', days:30, store:1},
+  {id:'b2', area:'Outside storage doors', what:'Spray the lock barrels with dry graphite', days:91, store:1},
+  {id:'k1', area:'Brakes and hubs',   what:'Have a certified RV technician inspect the brakes and hubs', days:365, pro:1},
+  {id:'k2', area:'Brakes and hubs',   what:'Check the brake amp draw, shoe wear and adjustment', days:365, pro:1},
+  {id:'k3', area:'Wheel bearings',    what:'Repack the wheel bearings with fresh grease', days:365, miles:12000, pro:1},
+  {id:'e1', area:'Electrical',        what:'Check and service the batteries', days:91, trip:1, store:1},
+  {id:'e2', area:'Electrical',        what:'Test every outlet that has test and reset buttons on it', days:91, store:1},
+  {id:'e3', area:'Electrical',        what:'Service the generator, if you have one', days:365, store:1},
+  {id:'d1', area:'Entry door',        what:'Check the latches and locks work', days:null, trip:1, store:1},
+  {id:'d2', area:'Entry door',        what:'Spray dry lube on the hinges', days:91, store:1},
+  {id:'d3', area:'Entry door',        what:'Adjust the screen door and its latch', days:91, store:1},
+  {id:'g1', area:'Emergency exit window', what:'Open it, close it and check it works, so the seal does not stick', days:30, trip:1, store:1},
+  {id:'s1', area:'Entry steps',       what:'Clean them and spray on dry lube', days:182, store:1},
+  {id:'o1', area:'Outside walls',     what:'Wash with warm water and mild soap', days:91, store:1},
+  {id:'o2', area:'Outside walls',     what:'Put on non-abrasive wax, but keep it off the decals', days:182},
+  {id:'o3', area:'Outside trim',      what:'Look over the sealant for gaps and cracks, and reseal where needed', days:91, store:1},
+  {id:'f1', area:'Frame and underbelly', what:'Look for damage, loose wires and debris, and clean it out', days:365, store:1},
+  {id:'f2', area:'Frame and underbelly', what:'Check the frame for chipped paint and rust, and repaint it', days:91, store:1},
+  {id:'h1', area:'Hitch and coupler', what:'Check for damage and wear, then clean and grease it', days:365, store:1},
+  {id:'l1', area:'Propane system',    what:'Have a dealer test the whole system for leaks', days:365, pro:1},
+  {id:'l2', area:'Propane system',    what:'Have a dealer check the pressure and the regulator setting', days:365, pro:1},
+  {id:'p1', area:'Plumbing',          what:'Check the hoses, fittings and pipes for leaks, and tighten what is loose', days:91, store:1},
+  {id:'p2', area:'Plumbing',          what:'Spray dry lube on the dump valve cables', days:365, store:1},
+  {id:'p3', area:'Plumbing',          what:'Winterize the system before it sits for the winter', days:365, store:1},
+  {id:'p4', area:'Plumbing',          what:'Drain the fresh water tank, and sanitize it once a year', days:365, trip:1},
+  {id:'p5', area:'Plumbing',          what:'Drain and flush the black and gray tanks', days:null, trip:1},
+  {id:'r1', area:'Roof',              what:'Look over the sealant for gaps and cracks, and reseal where needed', days:91, store:1},
+  {id:'r2', area:'Roof',              what:'Clean the roof with water and mild soap', days:182, store:1},
+  {id:'r3', area:'Roof',              what:'Clean the roof vent mechanisms and oil them lightly', days:365, store:1},
+  {id:'y1', area:'Alarms',            what:'Check the smoke, carbon monoxide and propane alarms, and put in fresh batteries', days:182, trip:1, store:1},
+  {id:'y2', area:'Fire extinguisher', what:'Check it is still properly charged', days:182},
+  {id:'n1', area:'Slide-out room',    what:'Have a certified RV technician adjust the slide-out', days:365, pro:1},
+  {id:'n2', area:'Slide-out room',    what:'Check the slide roof for debris and clear it off', days:null, trip:1},
+  {id:'n3', area:'Slide-out room',    what:'Check and clean all the seals', days:91, trip:1, store:1},
+  {id:'t1', area:'Wheels and tires',  what:'Check the lug nuts are tight to the right torque', days:91, trip:1, store:1},
+  {id:'t2', area:'Wheels and tires',  what:'Look the tires over for wear and damage', days:91, store:1},
+  {id:'t3', area:'Wheels and tires',  what:'Check the tire pressure against the number on the tire label', days:30, trip:1, store:1}
+];
+const TASK = {}; TASKS.forEach(t => TASK[t.id] = t);
+
+const GROUPS = [
+  {days:30,  name:'Once a month'},
+  {days:91,  name:'Every 3 months'},
+  {days:182, name:'Every 6 months'},
+  {days:365, name:'Once a year'},
+  {days:null,name:'Every trip, or before and after storage'}
+];
+
+const HOOKUPS   = ['30 amp','50 amp','Water','Sewer','Cable'];
+const AMENITIES = ['Pool','Hot tub','Pickleball','Playground','Fishing','Lake or river',
+                   'Beach','Laundry','Camp store','Dog park','Wifi','Good cell signal',
+                   'Bathhouse','Walking trails','Boat ramp'];
+
+const MILE_WARN = 500;   // warn when a mileage job is this close
+const DAY_WARN  = 60;    // warn when a calendar job is this close
+
+/* =========================================================================
+   4. HELPERS
+========================================================================= */
+let data = { trips:[], records:[], custom:{}, ticks:{} };
+let ui = { tab:'trips', form:null, editStop:null, editTrip:null, lastAlert:null };
+
+const $  = id => document.getElementById(id);
+const num = v => { const n = parseInt(String(v).replace(/[^0-9-]/g,''),10); return isNaN(n) ? null : n; };
+const money = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g,'')); return isNaN(n) ? null : n; };
+const fmt = n => (n||0).toLocaleString('en-US');
+const cash = n => '$' + (n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const today = () => new Date().toISOString().slice(0,10);
+const daysBetween = (a,b) => Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+const esc = s => { const d = document.createElement('div'); d.textContent = (s==null?'':s); return d.innerHTML; };
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+function prettyDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+/* ---- trip maths ---------------------------------------------------- */
+function tripMiles(t){
+  if (t.oldMiles != null) return t.oldMiles;
+  let total = 0, prev = t.startOdo;
+  for (const s of (t.stops||[])){
+    if (prev != null && s.odoIn != null && s.odoIn > prev) total += s.odoIn - prev;
+    prev = (s.odoOut != null) ? s.odoOut : null;
+  }
+  if (prev != null && t.endOdo != null && t.endOdo > prev) total += t.endOdo - prev;
+  return total;
+}
+function totalMiles(){ return data.trips.reduce((s,t) => s + tripMiles(t), 0); }
+function tripNights(t){
+  return (t.stops||[]).reduce((n,s) => n + stopNights(s), 0);
+}
+function stopNights(s){
+  if (!s.arrive || !s.depart) return 0;
+  const n = daysBetween(s.arrive, s.depart);
+  return n > 0 ? n : 0;
+}
+function stopCost(s){
+  if (s.total != null) return s.total;
+  const n = stopNights(s);
+  return (s.price != null && n) ? s.price * n : null;
+}
+/* ---- fuel ------------------------------------------------------------ */
+function fillCost(f){
+  if (f.gallons == null || f.price == null) return null;
+  return f.gallons * f.price;
+}
+function tripGallons(t){
+  return (t.fuel||[]).reduce((g,f) => g + (f.gallons || 0), 0);
+}
+function tripFuelCost(t){
+  return (t.fuel||[]).reduce((c,f) => c + (fillCost(f) || 0), 0);
+}
+/* every mile the truck drove, local driving included */
+function truckMiles(t){
+  if (t.startOdo == null || t.endOdo == null) return null;
+  return t.endOdo - t.startOdo;
+}
+function tripMPG(t){
+  const m = truckMiles(t), g = tripGallons(t);
+  if (m == null || !g) return null;
+  return m / g;
+}
+
+function openTrip(){ return data.trips.find(t => !t.closed); }
+function lastStop(t){ return (t.stops && t.stops.length) ? t.stops[t.stops.length-1] : null; }
+/* where are we in an open trip? 'driving' = on the road, 'parked' = at a stop */
+function tripState(t){
+  const s = lastStop(t);
+  if (!s) return 'driving';
+  return (s.odoOut == null) ? 'parked' : 'driving';
+}
+function lastOdo(t){
+  const s = lastStop(t);
+  if (!s) return t.startOdo;
+  return (s.odoOut != null) ? s.odoOut : s.odoIn;
+}
+function tripDates(t){
+  if (t.oldMiles != null) return {start:t.startDate, end:t.endDate};
+  const stops = t.stops || [];
+  const start = t.startDate || (stops[0] && stops[0].arrive) || '';
+  const end   = t.endDate   || (stops.length ? stops[stops.length-1].depart : '') || '';
+  return {start, end};
+}
+
+/* ---- maintenance maths --------------------------------------------- */
+function lastRecord(taskId){
+  const list = data.records.filter(r => r.taskId === taskId && r.date);
+  if (!list.length) return null;
+  return list.sort((a,b) => b.date.localeCompare(a.date))[0];
+}
+function mileInterval(task){
+  const c = data.custom[task.id];
+  if (c && c.miles) return c.miles;
+  return task.miles || null;
+}
+function statusOf(task){
+  const rec = lastRecord(task.id);
+  const mi  = mileInterval(task);
+  if (!task.days && !mi) return {state:'event'};
+  if (!rec) return {state:'never'};
+
+  let left = null, milesLeft = null;
+  if (task.days) left = task.days - daysBetween(rec.date, today());
+  if (mi && rec.miles != null) milesLeft = rec.miles + mi - totalMiles();
+
+  let state = 'ok';
+  if (left != null){
+    if (left < 0) state = 'late';
+    else if (left <= DAY_WARN) state = 'soon';
+  }
+  if (milesLeft != null){
+    if (milesLeft < 0) state = 'late';
+    else if (milesLeft <= MILE_WARN && state === 'ok') state = 'soon';
+  }
+  return {state, left, milesLeft, last:rec.date, rec};
+}
+function statusLine(task, s){
+  if (s.state === 'never') return 'No date recorded yet.';
+  const bits = [];
+  if (s.left != null){
+    if (s.left < 0)        bits.push('Overdue by ' + Math.abs(s.left) + ' days');
+    else if (s.left === 0) bits.push('Due today');
+    else                   bits.push('Due in ' + s.left + ' days');
+  }
+  if (s.milesLeft != null){
+    bits.push(s.milesLeft < 0 ? fmt(-s.milesLeft) + ' miles past due'
+                              : 'or in ' + fmt(s.milesLeft) + ' miles');
+  }
+  return bits.join(', ') + '. Last done ' + prettyDate(s.last) + '.';
+}
+function addDays(iso, n){
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+}
+/* the date a job next comes due, or null if we have no starting date */
+function nextDue(task){
+  if (!task.days) return null;
+  const rec = lastRecord(task.id);
+  if (!rec) return null;
+  return addDays(rec.date, task.days);
+}
+/* every dated job, soonest first */
+function upcoming(){
+  const out = [];
+  for (const t of TASKS){
+    const due = nextDue(t);
+    if (due) out.push({task:t, due, left: daysBetween(today(), due)});
+  }
+  return out.sort((a,b) => a.due.localeCompare(b.due));
+}
+function undated(){
+  return TASKS.filter(t => t.days && !lastRecord(t.id));
+}
+
+/* everything that needs attention, sorted worst first */
+function attention(){
+  const late = [], soon = [];
+  for (const t of TASKS){
+    const s = statusOf(t);
+    if (s.state === 'late') late.push([t,s]);
+    else if (s.state === 'soon') soon.push([t,s]);
+  }
+  const rank = x => (x[1].left != null ? x[1].left : 9999);
+  late.sort((a,b) => rank(a) - rank(b));
+  soon.sort((a,b) => rank(a) - rank(b));
+  return {late, soon};
+}
+/* the short warning shown right after an odometer number is entered */
+function odoWarning(){
+  const out = [];
+  for (const t of TASKS){
+    const s = statusOf(t);
+    if (s.milesLeft != null && s.milesLeft <= MILE_WARN){
+      out.push(s.milesLeft < 0
+        ? t.area + ' \u2014 ' + t.what.toLowerCase() + ' \u2014 is ' + fmt(-s.milesLeft) + ' miles past due.'
+        : t.area + ' \u2014 ' + t.what.toLowerCase() + ' \u2014 is due in ' + fmt(s.milesLeft) + ' miles.');
+    }
+  }
+  return out;
+}
+function dateWarning(){
+  const {late, soon} = attention();
+  return late.concat(soon).filter(([t,s]) => s.left != null).map(([t,s]) =>
+    (s.left < 0 ? t.area + ': ' + t.what.toLowerCase() + ' is ' + Math.abs(s.left) + ' days overdue.'
+                : t.area + ': ' + t.what.toLowerCase() + ' is due in ' + s.left + ' days.'));
+}
+
+/* =========================================================================
+   5. THE ODOMETER AT THE TOP
+========================================================================= */
+let builtFor = '';
+function drawOdo(){
+  const text = fmt(totalMiles());
+  const box = $('odo');
+  $('odoText').textContent = text + ' miles';
+  if (text === builtFor) return;
+  box.innerHTML = '';
+  for (const ch of text){
+    const cell = document.createElement('div');
+    if (ch === ','){ cell.className = 'cell comma'; cell.innerHTML = '<span>,</span>'; }
+    else {
+      cell.className = 'cell';
+      const strip = document.createElement('div');
+      strip.className = 'strip';
+      for (let i=0;i<10;i++){ const d = document.createElement('div'); d.textContent = i; strip.appendChild(d); }
+      cell.appendChild(strip);
+      cell.dataset.digit = ch;
+    }
+    box.appendChild(cell);
+  }
+  builtFor = text;
+  requestAnimationFrame(() => {
+    box.querySelectorAll('.cell:not(.comma)').forEach(c => {
+      c.querySelector('.strip').style.transform = 'translateY(-' + (c.dataset.digit*10) + '%)';
+    });
+  });
+}
+
+/* =========================================================================
+   6. THE TRIPS TAB
+========================================================================= */
+function renderTrips(){
+  const box = $('tripsBox');
+  const open = openTrip();
+  let html = '';
+
+  if (ui.lastAlert && ui.lastAlert.length){
+    html += '<div class="card alert"><h2>Before you go any further</h2>' +
+      ui.lastAlert.map(l => '<p class="job-when late" style="margin:8px 0">' + esc(l) + '</p>').join('') +
+      '<button class="btn ghost small" data-act="dismissAlert">Alright, got it</button></div>';
+  }
+
+  html += open ? liveTripHTML(open) : startTripHTML();
+
+  /* finished trips */
+  const done = data.trips.filter(t => t.closed)
+    .sort((a,b) => (tripDates(b).start||'0').localeCompare(tripDates(a).start||'0'));
+  html += '<div class="card"><h2>Every trip</h2>' +
+    '<p class="hint">' + done.length + ' finished trips, ' + fmt(totalMiles()) + ' miles in total</p>' +
+    (done.length ? done.map(tripRowHTML).join('') : '<p class="empty">No finished trips yet.</p>') +
+    '</div>';
+
+  html += '<div style="text-align:center;margin-top:24px" class="no-print">' +
+    '<button class="link" data-act="download">Save a backup file</button>' +
+    '<span style="color:var(--line)">&nbsp;|&nbsp;</span>' +
+    '<button class="link" data-act="restore">Load a backup file</button>' +
+    '<p class="hint" style="margin-top:12px">Everything is stored in this browser, on this device only. ' +
+    'A backup file keeps a copy you can move to another phone or computer.</p></div>';
+
+  box.innerHTML = html;
+}
+
+function startTripHTML(){
+  if (ui.form === 'newTrip'){
+    return '<div class="card live"><h2>Start a trip</h2>' +
+      '<p class="hint">Fill this in as you pull out of the driveway.</p>' +
+      '<div class="field"><label for="nt-name">What do you want to call this trip?</label>' +
+      '<input type="text" id="nt-name" placeholder="Myrtle Beach, or Fall trip out west"></div>' +
+      '<div class="pair"><div class="field"><label for="nt-date">Day you left home</label>' +
+      '<input type="date" id="nt-date" value="' + today() + '"></div>' +
+      '<div class="field"><label for="nt-odo">Odometer as you left home</label>' +
+      '<input type="number" id="nt-odo" inputmode="numeric" placeholder="0"></div></div>' +
+      '<p class="warn hidden" id="nt-warn"></p>' +
+      '<div class="btnrow"><button class="btn" data-act="saveNewTrip">Start the trip</button>' +
+      '<button class="btn ghost" data-act="cancelForm">Cancel</button></div></div>';
+  }
+  return '<div class="card live"><h2>No trip going on right now</h2>' +
+    '<p class="hint">Start one as you pull out of the driveway.</p>' +
+    '<button class="btn" data-act="newTrip">Start a trip</button>' +
+    '<button class="btn ghost" data-act="addOldTrip">Add a trip that already happened</button></div>';
+}
+
+function liveTripHTML(t){
+  const state = tripState(t);
+  const stops = t.stops || [];
+  let html = '<div class="card live"><h2>' + esc(t.name) + '</h2>' +
+    '<p class="hint">Started ' + prettyDate(t.startDate) + ' at ' + fmt(t.startOdo) + ' on the odometer.</p>';
+
+  if (stops.length){
+    html += '<h3>Stops so far</h3>';
+    stops.forEach((s,i) => { html += stopSummaryHTML(t, s, i); });
+  }
+
+  html += '<div class="readout"><span>Miles so far this trip</span><strong>' + fmt(tripMiles(t)) + '</strong></div>';
+  html += fuelHTML(t);
+
+  if (ui.form === 'arrive'){
+    html += arriveFormHTML();
+  } else if (ui.form === 'depart'){
+    html += departFormHTML();
+  } else if (ui.form === 'home'){
+    html += homeFormHTML();
+  } else if (state === 'driving'){
+    html += '<p class="hint" style="margin-top:18px">You are on the road.</p>' +
+            '<button class="btn" data-act="arrive">We have arrived somewhere</button>';
+  } else {
+    const s = lastStop(t);
+    html += '<p class="hint" style="margin-top:18px">You are parked at ' + esc(s.name) + '.</p>' +
+            '<button class="btn" data-act="editStop:' + s.id + '">Write up this campground</button>' +
+            '<button class="btn ghost" data-act="depart">We are pulling out</button>';
+  }
+  html += '<button class="btn ghost small no-print" data-act="scrapTrip:' + t.id + '">Delete this whole trip</button>';
+  html += '</div>';
+  return html;
+}
+
+function arriveFormHTML(){
+  return '<h3>We have arrived</h3>' +
+    '<div class="pair"><div class="field"><label for="ar-date">Day you got here</label>' +
+    '<input type="date" id="ar-date" value="' + today() + '"></div>' +
+    '<div class="field"><label for="ar-odo">Odometer as you parked</label>' +
+    '<input type="number" id="ar-odo" inputmode="numeric" placeholder="0"></div></div>' +
+    '<div class="field"><label for="ar-kind">What kind of stop is this?</label>' +
+    '<select id="ar-kind"><option value="camp">A campground</option>' +
+    '<option value="other">Something else, like a dealer or storage lot</option></select></div>' +
+    '<div class="field"><label for="ar-name">Name of the place</label>' +
+    '<input type="text" id="ar-name" placeholder="Huntington Beach State Park"></div>' +
+    '<div class="field"><label for="ar-addr">Address</label>' +
+    '<input type="text" id="ar-addr" placeholder="16148 Ocean Hwy, Murrells Inlet, SC"></div>' +
+    '<p class="warn hidden" id="ar-warn"></p>' +
+    '<div class="btnrow"><button class="btn" data-act="saveArrive">Save</button>' +
+    '<button class="btn ghost" data-act="cancelForm">Cancel</button></div>';
+}
+
+function departFormHTML(){
+  return '<h3>We are pulling out</h3>' +
+    '<div class="pair"><div class="field"><label for="dp-date">Day you left</label>' +
+    '<input type="date" id="dp-date" value="' + today() + '"></div>' +
+    '<div class="field"><label for="dp-odo">Odometer as you pulled out</label>' +
+    '<input type="number" id="dp-odo" inputmode="numeric" placeholder="0"></div></div>' +
+    '<p class="warn hidden" id="dp-warn"></p>' +
+    '<p class="hint tight" style="margin-top:16px">Where are you headed?</p>' +
+    '<div class="btnrow"><button class="btn" data-act="departOn">On to another stop</button>' +
+    '<button class="btn" data-act="departHome">Heading home</button></div>' +
+    '<button class="btn ghost small" data-act="cancelForm">Cancel</button>';
+}
+
+function homeFormHTML(){
+  return '<h3>Back home</h3>' +
+    '<div class="pair"><div class="field"><label for="hm-date">Day you got home</label>' +
+    '<input type="date" id="hm-date" value="' + today() + '"></div>' +
+    '<div class="field"><label for="hm-odo">Odometer in your driveway</label>' +
+    '<input type="number" id="hm-odo" inputmode="numeric" placeholder="0"></div></div>' +
+    '<p class="warn hidden" id="hm-warn"></p>' +
+    '<div class="btnrow"><button class="btn" data-act="saveHome">Finish the trip</button>' +
+    '<button class="btn ghost" data-act="cancelForm">Cancel</button></div>';
+}
+
+function stopSummaryHTML(t, s, i){
+  const editing = (ui.editStop === s.id);
+  if (editing) return stopFormHTML(t, s);
+
+  const n = stopNights(s);
+  const cost = stopCost(s);
+  const bits = [];
+  if (n) bits.push(n + (n===1?' night':' nights'));
+  if (s.site) bits.push('site ' + s.site);
+  if (s.price != null) bits.push(cash(s.price) + ' a night');
+  if (cost != null) bits.push(cash(cost) + ' in all');
+
+  let html = '<div class="row"><div class="row-top">' +
+    '<div class="miles">' + (s.odoIn != null ? fmt(s.odoIn) : '&mdash;') + '</div>' +
+    '<div style="flex:1;min-width:0"><p class="where">' + esc(s.name) +
+      (s.kind === 'other' ? '<span class="tag">not a campground</span>' : '') +
+      (s.verdict ? '<span class="tag ' + s.verdict + '">' +
+        (s.verdict==='yes'?'go back':s.verdict==='maybe'?'maybe':'not again') + '</span>' : '') +
+    '</p>';
+  if (s.address) html += '<p class="when">' + esc(s.address) + '</p>';
+  html += '<p class="when">' + (s.arrive ? prettyDate(s.arrive) : '?') +
+          (s.depart ? ' to ' + prettyDate(s.depart) : ' \u2014 still here') + '</p>';
+  if (bits.length) html += '<p class="detail">' + bits.join(' &nbsp;·&nbsp; ') + '</p>';
+  if (s.hookups && s.hookups.length) html += '<p class="detail">' + s.hookups.join(', ') + '</p>';
+  if (s.amenities && s.amenities.length) html += '<p class="detail">' + s.amenities.join(', ') + '</p>';
+  if (s.notes) html += '<p class="notes">' + esc(s.notes) + '</p>';
+  html += '<div class="acts no-print"><button class="link" data-act="editStop:' + s.id + '">Write it up</button>' +
+          '<button class="link danger" data-act="delStop:' + s.id + '">Delete this stop</button></div>';
+  html += '</div></div></div>';
+  return html;
+}
+
+function stopFormHTML(t, s){
+  const camp = s.kind !== 'other';
+  const chk = (arr,v) => (arr||[]).indexOf(v) >= 0 ? ' checked' : '';
+  let html = '<div class="row"><h3>' + esc(s.name) + '</h3>';
+
+  html += '<div class="field"><label for="st-name">Name</label>' +
+    '<input type="text" id="st-name" value="' + esc(s.name) + '"></div>' +
+    '<div class="field"><label for="st-addr">Address</label>' +
+    '<input type="text" id="st-addr" value="' + esc(s.address||'') + '"></div>' +
+    '<div class="pair"><div class="field"><label for="st-arrive">Arrived</label>' +
+    '<input type="date" id="st-arrive" value="' + (s.arrive||'') + '"></div>' +
+    '<div class="field"><label for="st-depart">Left</label>' +
+    '<input type="date" id="st-depart" value="' + (s.depart||'') + '"></div></div>';
+
+  if (camp){
+    html += '<div class="pair"><div class="field"><label for="st-site">Site number</label>' +
+      '<input type="text" id="st-site" value="' + esc(s.site||'') + '"></div>' +
+      '<div class="field"><label for="st-price">Price a night</label>' +
+      '<input type="number" id="st-price" inputmode="decimal" step="0.01" value="' + (s.price != null ? s.price : '') + '"></div></div>' +
+
+      '<div class="field"><label>Hookups</label><div class="boxes">' +
+      HOOKUPS.map(h => '<label><input type="checkbox" data-hook="' + h + '"' + chk(s.hookups,h) + '>' + h + '</label>').join('') +
+      '</div></div>' +
+
+      '<div class="pair"><div class="field"><label for="st-park">Back-in or pull-through?</label>' +
+      '<select id="st-park"><option value="">Not noted</option>' +
+      '<option value="backin"' + (s.park==='backin'?' selected':'') + '>Back-in</option>' +
+      '<option value="through"' + (s.park==='through'?' selected':'') + '>Pull-through</option></select></div>' +
+      '<div class="field"><label for="st-level">Was the pad level?</label>' +
+      '<select id="st-level"><option value="">Not noted</option>' +
+      '<option value="level"' + (s.level==='level'?' selected':'') + '>Level</option>' +
+      '<option value="blocks"' + (s.level==='blocks'?' selected':'') + '>Needed blocks</option></select></div></div>' +
+
+      '<div class="field"><label>What was there?</label><div class="boxes">' +
+      AMENITIES.map(a => '<label><input type="checkbox" data-amen="' + a + '"' + chk(s.amenities,a) + '>' + a + '</label>').join('') +
+      '</div></div>';
+  }
+
+  html += '<div class="field"><label for="st-notes">Notes</label>' +
+    '<p class="hint tight">How the site was, the noise, the drive in, anything you would want to know next time.</p>' +
+    '<textarea id="st-notes" placeholder="Easy back-in, shade all afternoon. Tight turn at the gate with a long trailer.">' +
+    esc(s.notes||'') + '</textarea></div>';
+
+  if (camp){
+    html += '<div class="field"><label for="st-verdict">Would you go back?</label>' +
+      '<select id="st-verdict"><option value="">Haven\u2019t decided</option>' +
+      '<option value="yes"' + (s.verdict==='yes'?' selected':'') + '>Yes</option>' +
+      '<option value="maybe"' + (s.verdict==='maybe'?' selected':'') + '>Maybe</option>' +
+      '<option value="no"' + (s.verdict==='no'?' selected':'') + '>No</option></select></div>';
+  }
+
+  html += '<div class="btnrow"><button class="btn" data-act="saveStop:' + s.id + '">Save this write-up</button>' +
+          '<button class="btn ghost" data-act="cancelForm">Cancel</button></div></div>';
+  return html;
+}
+
+function fuelHTML(t){
+  const fills = (t.fuel || []).slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  const gal = tripGallons(t), cost = tripFuelCost(t), mpg = tripMPG(t), tm = truckMiles(t);
+  let html = '<h3>Fuel</h3>';
+
+  if (!fills.length){
+    html += '<p class="hint">Nothing recorded yet. Add a fill-up each time you stop for gas.</p>';
+  } else {
+    fills.forEach(f => {
+      const c = fillCost(f);
+      html += '<div class="stat"><span>' + (f.date ? prettyDate(f.date) : 'No date') +
+        '<br><span class="detail" style="margin:0">' + (f.gallons != null ? f.gallons.toFixed(3).replace(/\.?0+$/,'') + ' gallons' : '?') +
+        (f.price != null ? ' at ' + cash(f.price) + ' a gallon' : '') + '</span></span>' +
+        '<strong>' + (c != null ? cash(c) : '\u2014') +
+        ' <button class="link danger no-print" data-act="delFill:' + t.id + '~' + f.id + '">x</button></strong></div>';
+    });
+    html += '<div class="stat"><span><strong style="font-family:var(--slab)">Gallons bought</strong></span><strong>' +
+      gal.toFixed(3).replace(/\.?0+$/,'') + '</strong></div>' +
+      '<div class="stat"><span><strong style="font-family:var(--slab)">Spent on gas</strong></span><strong>' + cash(cost) + '</strong></div>' +
+      '<div class="stat"><span><strong style="font-family:var(--slab)">Average a gallon</strong></span><strong>' +
+        (gal ? cash(cost/gal) : '\u2014') + '</strong></div>';
+    if (mpg != null){
+      html += '<div class="stat"><span><strong style="font-family:var(--slab)">Miles a gallon</strong>' +
+        '<br><span class="detail" style="margin:0">' + fmt(tm) + ' truck miles, towing and local both</span></span>' +
+        '<strong>' + mpg.toFixed(1) + '</strong></div>';
+    } else if (!t.closed){
+      html += '<p class="hint" style="margin-top:10px">Miles a gallon shows up once the trip is finished and you have ' +
+        'the odometer reading from your driveway. Fill up when you get home so the number is true.</p>';
+    }
+  }
+
+  if (ui.fuelFor === t.id){
+    html += '<div class="pair"><div class="field"><label for="fl-date">Day</label>' +
+      '<input type="date" id="fl-date" value="' + today() + '"></div>' +
+      '<div class="field"><label for="fl-gal">Gallons</label>' +
+      '<input type="number" id="fl-gal" inputmode="decimal" step="0.001" placeholder="0"></div>' +
+      '<div class="field"><label for="fl-price">Price a gallon</label>' +
+      '<input type="number" id="fl-price" inputmode="decimal" step="0.001" placeholder="0.00"></div></div>' +
+      '<p class="warn hidden" id="fl-warn"></p>' +
+      '<div class="btnrow"><button class="btn small" data-act="saveFill:' + t.id + '">Save this fill-up</button>' +
+      '<button class="btn ghost small" data-act="cancelFuel">Cancel</button></div>';
+  } else {
+    html += '<button class="btn ghost small no-print" data-act="addFill:' + t.id + '">Add a fill-up</button>';
+  }
+  return html;
+}
+
+function tripRowHTML(t){
+  const d = tripDates(t);
+  const stops = t.stops || [];
+  const n = tripNights(t);
+  const open = ui.editTrip === t.id;
+  let html = '<div class="row"><div class="row-top">' +
+    '<div class="miles">' + fmt(tripMiles(t)) + '</div>' +
+    '<div style="flex:1;min-width:0"><p class="where">' + esc(t.name) +
+      (t.oldMiles != null ? '<span class="tag">from the paper log</span>' : '') + '</p>' +
+    '<p class="when">' + (d.start ? prettyDate(d.start) : 'Date not recorded') +
+      (d.end && d.end !== d.start ? ' to ' + prettyDate(d.end) : '') + '</p>';
+  const bits = [];
+  if (stops.length) bits.push(stops.length + (stops.length===1?' stop':' stops'));
+  if (n) bits.push(n + (n===1?' night':' nights'));
+  if (bits.length) html += '<p class="detail">' + bits.join(' &nbsp;·&nbsp; ') + '</p>';
+  html += '<div class="acts no-print">' +
+    (t.oldMiles == null ? '<button class="link" data-act="openTripDetail:' + t.id + '">' +
+      (open ? 'Hide the details' : 'Show the details') + '</button>' : '') +
+    '<button class="link" data-act="reopen:' + t.id + '">Reopen</button>' +
+    '<button class="link danger" data-act="scrapTrip:' + t.id + '">Delete</button></div>';
+  html += '</div></div>';
+  if (open){
+    stops.forEach((s,i) => { html += '<div style="padding-left:14px">' + stopSummaryHTML(t,s,i) + '</div>'; });
+    html += '<div style="padding-left:14px">' + fuelHTML(t) + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+/* =========================================================================
+   7. ACTIONS ON TRIPS
+========================================================================= */
+async function saveNewTrip(){
+  const name = $('nt-name').value.trim();
+  const odo  = num($('nt-odo').value);
+  const date = $('nt-date').value;
+  if (!name){ return warnIn('nt-warn','Give the trip a name.'); }
+  if (odo == null){ return warnIn('nt-warn','Put in the odometer reading.'); }
+  data.trips.push({id:uid('t'), name, startDate:date, startOdo:odo, stops:[], closed:false});
+  ui.form = null;
+  await save(); flagDateWarnings(); render();
+}
+async function saveArrive(){
+  const t = openTrip();
+  const odo = num($('ar-odo').value);
+  const name = $('ar-name').value.trim();
+  if (!name) return warnIn('ar-warn','Put in the name of the place.');
+  if (odo == null) return warnIn('ar-warn','Put in the odometer reading.');
+  const prev = lastOdo(t);
+  if (prev != null && odo < prev) return warnIn('ar-warn','That is lower than the last reading of ' + fmt(prev) + '.');
+  const stop = {
+    id: uid('s'), kind: $('ar-kind').value, name,
+    address: $('ar-addr').value.trim(), arrive: $('ar-date').value,
+    depart:'', odoIn: odo, odoOut: null,
+    site:'', price:null, hookups:[], park:'', level:'', amenities:[], notes:'', verdict:''
+  };
+  t.stops.push(stop);
+  ui.form = null; ui.editStop = stop.id;
+  await save(); flagOdoWarnings(); render();
+}
+async function saveDepart(goingHome){
+  const t = openTrip();
+  const s = lastStop(t);
+  const odo = num($('dp-odo').value);
+  if (odo == null) return warnIn('dp-warn','Put in the odometer reading.');
+  if (s.odoIn != null && odo < s.odoIn) return warnIn('dp-warn','That is lower than the reading when you arrived, ' + fmt(s.odoIn) + '.');
+  s.odoOut = odo;
+  s.depart = $('dp-date').value;
+  ui.form = goingHome ? 'home' : 'arrive';
+  await save(); flagOdoWarnings(); render();
+}
+async function saveHome(){
+  const t = openTrip();
+  const odo = num($('hm-odo').value);
+  if (odo == null) return warnIn('hm-warn','Put in the odometer reading.');
+  const prev = lastOdo(t);
+  if (prev != null && odo < prev) return warnIn('hm-warn','That is lower than the last reading of ' + fmt(prev) + '.');
+  t.endOdo = odo; t.endDate = $('hm-date').value; t.closed = true;
+  ui.form = null;
+  await save(); flagOdoWarnings(); render();
+}
+async function saveStop(id){
+  let stop = null;
+  for (const t of data.trips){ const f = (t.stops||[]).find(s => s.id === id); if (f){ stop = f; break; } }
+  if (!stop) return;
+  stop.name    = $('st-name').value.trim() || stop.name;
+  stop.address = $('st-addr').value.trim();
+  stop.arrive  = $('st-arrive').value;
+  stop.depart  = $('st-depart').value;
+  stop.notes   = $('st-notes').value;
+  if (stop.kind !== 'other'){
+    stop.site  = $('st-site').value.trim();
+    stop.price = money($('st-price').value);
+    stop.park  = $('st-park').value;
+    stop.level = $('st-level').value;
+    stop.verdict = $('st-verdict').value;
+    stop.hookups   = [...document.querySelectorAll('[data-hook]')].filter(b => b.checked).map(b => b.dataset.hook);
+    stop.amenities = [...document.querySelectorAll('[data-amen]')].filter(b => b.checked).map(b => b.dataset.amen);
+  }
+  ui.editStop = null;
+  await save(); render();
+}
+async function delStop(id){
+  if (!confirm('Delete this stop? The miles for it go too.')) return;
+  for (const t of data.trips){ t.stops = (t.stops||[]).filter(s => s.id !== id); }
+  ui.editStop = null;
+  await save(); render();
+}
+async function scrapTrip(id){
+  const t = data.trips.find(x => x.id === id);
+  if (!confirm('Delete the trip "' + t.name + '"? Every stop and all its miles go with it.')) return;
+  data.trips = data.trips.filter(x => x.id !== id);
+  await save(); render();
+}
+async function reopenTrip(id){
+  const t = data.trips.find(x => x.id === id);
+  if (openTrip()){ alert('Finish the trip you have going first.'); return; }
+  if (t.oldMiles != null){ alert('This one came off the paper log and has no stops to reopen.'); return; }
+  t.closed = false; t.endOdo = null; t.endDate = '';
+  await save(); render();
+}
+async function addOldTrip(){
+  const name = prompt('What was the trip called?');
+  if (!name) return;
+  const miles = num(prompt('How many miles was it, all told?'));
+  if (miles == null) return;
+  const start = prompt('Day you left, as 2024-05-25. Leave blank if you do not know.') || '';
+  const end   = prompt('Day you got home, same style. Leave blank if you do not know.') || '';
+  data.trips.push({id:uid('t'), name, oldMiles:miles, startDate:start, endDate:end, stops:[], closed:true});
+  await save(); render();
+}
+async function saveFill(tripId){
+  const t = data.trips.find(x => x.id === tripId);
+  if (!t) return;
+  const g = money($('fl-gal').value);
+  const p = money($('fl-price').value);
+  if (!g) return warnIn('fl-warn','Put in the gallons.');
+  if (p == null) return warnIn('fl-warn','Put in the price a gallon.');
+  t.fuel = t.fuel || [];
+  t.fuel.push({id:uid('f'), date:$('fl-date').value || today(), gallons:g, price:p});
+  ui.fuelFor = null;
+  await save(); render();
+}
+async function delFill(arg){
+  const [tripId, fillId] = arg.split('~');
+  const t = data.trips.find(x => x.id === tripId);
+  if (!t) return;
+  if (!confirm('Delete this fill-up?')) return;
+  t.fuel = (t.fuel||[]).filter(f => f.id !== fillId);
+  await save(); render();
+}
+function warnIn(id, msg){ const el = $(id); el.textContent = msg; el.classList.remove('hidden'); }
+
+function flagOdoWarnings(){ ui.lastAlert = odoWarning(); }
+function flagDateWarnings(){ ui.lastAlert = dateWarning(); }
+
+/* =========================================================================
+   8. THE DUE TAB
+========================================================================= */
+function jobHTML(task, s, showDone){
+  const cls = s.state;
+  let html = '<div class="job"><p class="job-area">' + esc(task.area) +
+    (task.pro ? '<span class="tag pro">shop job</span>' : '') + '</p>' +
+    '<p class="job-what">' + esc(task.what) + '</p>' +
+    '<p class="job-when ' + cls + '">' + statusLine(task, s) + '</p>';
+  if (showDone !== false){
+    html += '<div class="acts no-print"><button class="link" data-act="doneToday:' + task.id + '">Done today</button>' +
+      '<button class="link" data-act="addRecord:' + task.id + '">Add it with a date and details</button></div>';
+  }
+  return html + '</div>';
+}
+
+function renderDue(){
+  const {late, soon} = attention();
+  let html = '';
+
+  if (late.length){
+    html += '<div class="card alert"><h2>Overdue</h2>' +
+      '<p class="hint">' + late.length + (late.length===1?' job is':' jobs are') + ' past due.</p>' +
+      late.map(([t,s]) => jobHTML(t,s)).join('') + '</div>';
+  }
+  if (soon.length){
+    html += '<div class="card"><h2>Coming up</h2>' +
+      '<p class="hint">Due within ' + DAY_WARN + ' days, or within ' + fmt(MILE_WARN) + ' miles.</p>' +
+      soon.map(([t,s]) => jobHTML(t,s)).join('') + '</div>';
+  }
+  if (!late.length && !soon.length){
+    html += '<div class="card"><h2>Nothing is due</h2>' +
+      '<p class="empty">Nothing on the schedule is due in the next ' + DAY_WARN + ' days.</p></div>';
+  }
+
+  html += '<div class="card"><h2>What is coming, soonest first</h2>';
+  const up = upcoming();
+  const nodate = undated();
+  if (!up.length){
+    html += '<p class="empty">Nothing has a date on it yet. Go to the Schedule tab and mark what you know has been done. ' +
+            'Once a job has a date, it shows up here with the day it next comes due.</p>';
+  } else {
+    html += '<p class="hint">Every job with a date on it. This is the whole road ahead, not just the next ' + DAY_WARN + ' days.</p>';
+    up.forEach(u => {
+      const cls = u.left < 0 ? 'late' : (u.left <= DAY_WARN ? 'soon' : 'ok');
+      const when = u.left < 0 ? Math.abs(u.left) + ' days ago'
+                 : u.left === 0 ? 'today'
+                 : 'in ' + u.left + ' days';
+      html += '<div class="stat"><span><strong style="font-family:var(--slab)">' + esc(u.task.area) + '.</strong> ' +
+        esc(u.task.what) + '<br><span class="job-when ' + cls + '">' + prettyDate(u.due) + ', ' + when + '</span></span></div>';
+    });
+  }
+  if (nodate.length){
+    html += '<p class="hint" style="margin-top:14px">' + nodate.length +
+      ' more jobs have no date on them yet, so they cannot be worked out. Mark them on the Schedule tab.</p>';
+  }
+  html += '<button class="btn" data-act="ics">Put these on your calendar</button>' +
+    '<p class="hint" style="margin-top:12px">This makes a calendar file with a reminder a week before each job. ' +
+    'Open it and your phone or computer adds them. Then your calendar tells you even when months go by without opening this app. ' +
+    'After you log some work, tap this again and re-import to freshen the dates.</p></div>';
+
+  html += '<div class="card"><h2>Before you leave and when you get back</h2>' +
+    '<p class="hint">The trailer maker asks for these every trip. Tick them off, then clear the list for next time.</p>' +
+    TASKS.filter(t => t.trip).map(t =>
+      '<label class="tick"><input type="checkbox" data-tick="' + t.id + '"' + (data.ticks[t.id]?' checked':'') + '>' +
+      '<span><strong>' + esc(t.area) + '.</strong> ' + esc(t.what) + '</span></label>').join('') +
+    '<button class="btn ghost" data-act="clearTicks">Clear all the ticks</button></div>';
+
+  $('dueBox').innerHTML = html;
+  const n = late.length;
+  $('tab-due').innerHTML = 'Due' + (n ? '<span class="dot">' + n + '</span>' : '');
+}
+
+/* =========================================================================
+   9. THE SCHEDULE TAB
+========================================================================= */
+function renderSchedule(){
+  let html = '<div class="card"><h2>Add a maintenance record</h2>' +
+    '<p class="hint">For work done today or any time in the past. Everything you add here shows up on the maintenance report.</p>' +
+    '<div class="field"><label for="rc-task">What was done</label><select id="rc-task">' +
+    '<option value="">Something not on the schedule</option>' +
+    TASKS.map(t => '<option value="' + t.id + '"' + (ui.form === 'rec:'+t.id ? ' selected':'') + '>' +
+      esc(t.area) + ' \u2014 ' + esc(t.what) + '</option>').join('') +
+    '</select></div>' +
+    '<div class="field"><label for="rc-what">Describe it in your own words</label>' +
+    '<input type="text" id="rc-what" placeholder="Bearings repacked, both axles"></div>' +
+    '<div class="pair"><div class="field"><label for="rc-date">Date</label>' +
+    '<input type="date" id="rc-date" value="' + today() + '"></div>' +
+    '<div class="field"><label for="rc-miles">Trailer miles that day</label>' +
+    '<input type="number" id="rc-miles" inputmode="numeric" value="' + totalMiles() + '"></div></div>' +
+    '<div class="pair"><div class="field"><label for="rc-who">Who did it</label>' +
+    '<input type="text" id="rc-who" placeholder="Me, or Camping World Spartanburg"></div>' +
+    '<div class="field"><label for="rc-cost">What it cost</label>' +
+    '<input type="number" id="rc-cost" inputmode="decimal" step="0.01" placeholder="0.00"></div></div>' +
+    '<div class="field"><label for="rc-notes">Notes</label>' +
+    '<textarea id="rc-notes" placeholder="Left side seal replaced while they were in there. Invoice in the folder."></textarea></div>' +
+    '<p class="warn hidden" id="rc-warn"></p>' +
+    '<button class="btn" data-act="saveRecord">Save this record</button></div>';
+
+  html += '<div class="card"><h2>The full schedule</h2>' +
+    '<p class="hint">The required maintenance schedule from the Grand Design owner\u2019s manual for your trailer. ' +
+    'Tap "Done today" and the clock starts over on that job.</p>';
+
+  for (const g of GROUPS){
+    const list = TASKS.filter(t => t.days === g.days);
+    if (!list.length) continue;
+    html += '<h3>' + g.name + '</h3>';
+    html += list.map(t => {
+      const s = statusOf(t);
+      if (s.state === 'event'){
+        return '<div class="job"><p class="job-area">' + esc(t.area) + '</p>' +
+               '<p class="job-what">' + esc(t.what) + '</p>' +
+               '<div class="acts no-print"><button class="link" data-act="doneToday:' + t.id + '">Mark it done</button></div></div>';
+      }
+      let j = jobHTML(t, s);
+      const mi = mileInterval(t);
+      j = j.replace('</div>', '<p class="detail">Mileage limit: ' +
+        (mi ? 'every ' + fmt(mi) + ' miles' : 'none set') +
+        ' <button class="link no-print" data-act="setMiles:' + t.id + '">change</button></p></div>');
+      return j;
+    }).join('');
+  }
+  html += '</div>';
+  $('schedBox').innerHTML = html;
+}
+
+async function saveRecord(){
+  const taskId = $('rc-task').value || null;
+  let what = $('rc-what').value.trim();
+  if (!what && taskId) what = TASK[taskId].area + ' \u2014 ' + TASK[taskId].what;
+  if (!what) return warnIn('rc-warn','Say what was done.');
+  data.records.push({
+    id: uid('r'), taskId, what,
+    date: $('rc-date').value || today(),
+    miles: num($('rc-miles').value),
+    who: $('rc-who').value.trim(),
+    cost: money($('rc-cost').value),
+    notes: $('rc-notes').value.trim()
+  });
+  await save(); render();
+  alert('Saved. It is on the maintenance report now.');
+}
+async function doneToday(taskId){
+  const t = TASK[taskId];
+  data.records.push({ id:uid('r'), taskId, what: t.area + ' \u2014 ' + t.what,
+    date: today(), miles: totalMiles(), who:'', cost:null, notes:'' });
+  await save(); render();
+}
+async function setMiles(taskId){
+  const cur = mileInterval(TASK[taskId]);
+  const v = prompt('Come due every how many miles? Leave blank for no mileage limit.', cur || '');
+  if (v === null) return;
+  const n = num(v);
+  if (n) data.custom[taskId] = {miles:n}; else delete data.custom[taskId];
+  await save(); render();
+}
+async function delRecord(id){
+  if (!confirm('Delete this maintenance record?')) return;
+  data.records = data.records.filter(r => r.id !== id);
+  await save(); render();
+}
+
+/* =========================================================================
+   10. THE REPORTS TAB
+========================================================================= */
+function renderReports(){
+  const trips = data.trips.filter(t => t.closed);
+  const stops = [];
+  data.trips.forEach(t => (t.stops||[]).forEach(s => stops.push(s)));
+  const camps = stops.filter(s => s.kind !== 'other');
+  const withPrice = camps.filter(s => s.price != null && stopNights(s) > 0);
+  const nights = camps.reduce((n,s) => n + stopNights(s), 0);
+  const spent  = withPrice.reduce((c,s) => c + stopCost(s), 0);
+  const avgNight = withPrice.length ? spent / withPrice.reduce((n,s)=>n+stopNights(s),0) : null;
+  const oldOnes = data.trips.filter(t => t.oldMiles != null).length;
+
+  /* miles by year */
+  const byYear = {};
+  data.trips.forEach(t => {
+    const d = tripDates(t);
+    const y = (d.end || d.start || '').slice(0,4) || 'No date';
+    byYear[y] = (byYear[y] || 0) + tripMiles(t);
+  });
+  const years = Object.keys(byYear).sort();
+  const peak = Math.max(1, ...Object.values(byYear));
+
+  const allGal  = data.trips.reduce((g,t) => g + tripGallons(t), 0);
+  const allFuel = data.trips.reduce((c,t) => c + tripFuelCost(t), 0);
+  const fuelled = data.trips.filter(t => tripGallons(t) > 0 && truckMiles(t) != null);
+  const fuelledMiles = fuelled.reduce((m,t) => m + truckMiles(t), 0);
+  const fuelledGal   = fuelled.reduce((g,t) => g + tripGallons(t), 0);
+
+  let html = '<div class="card"><h2>The numbers</h2>' +
+    stat('Total miles the trailer has rolled', fmt(totalMiles())) +
+    stat('Trips finished', fmt(trips.length)) +
+    stat('Campgrounds stayed at', fmt(camps.length)) +
+    stat('Nights camping', fmt(nights)) +
+    stat('Average stay', camps.length ? (nights/camps.length).toFixed(1) + ' nights' : '\u2014') +
+    stat('Average miles a trip', trips.length ? fmt(Math.round(totalMiles()/trips.length)) : '\u2014') +
+    stat('Average price a night', avgNight != null ? cash(avgNight) : '\u2014') +
+    stat('Spent on camping', withPrice.length ? cash(spent) : '\u2014') +
+    stat('Gallons of gas bought', allGal ? allGal.toFixed(1) : '\u2014') +
+    stat('Spent on gas', allFuel ? cash(allFuel) : '\u2014') +
+    stat('Miles a gallon, all trips', fuelledGal ? (fuelledMiles/fuelledGal).toFixed(1) : '\u2014') +
+    (oldOnes ? '<p class="hint" style="margin-top:14px">' + oldOnes + ' of these trips came off the paper log. ' +
+      'They have miles and dates but no campground detail, so they do not count toward the nights or the money.</p>' : '') +
+    '</div>';
+
+  html += '<div class="card"><h2>Miles by year</h2>' +
+    (years.length ? years.map(y =>
+      '<div class="bar-row"><div class="bar-label"><span>' + y + '</span><strong>' + fmt(byYear[y]) + '</strong></div>' +
+      '<div class="bar"><div style="width:' + Math.round(byYear[y]/peak*100) + '%"></div></div></div>').join('')
+      : '<p class="empty">No trips yet.</p>') + '</div>';
+
+  /* campgrounds */
+  const rated = camps.slice().sort((a,b) => {
+    const o = {yes:0, maybe:1, '':2, no:3};
+    return (o[a.verdict||''] - o[b.verdict||'']) || a.name.localeCompare(b.name);
+  });
+  html += '<div class="card"><h2>Campgrounds</h2>';
+  if (!rated.length) html += '<p class="empty">No campground write-ups yet.</p>';
+  rated.forEach(s => {
+    const n = stopNights(s), c = stopCost(s);
+    const bits = [];
+    if (n) bits.push(n + (n===1?' night':' nights'));
+    if (s.price != null) bits.push(cash(s.price) + ' a night');
+    if (c != null) bits.push(cash(c) + ' in all');
+    html += '<div class="row"><p class="where">' + esc(s.name) +
+      (s.verdict ? '<span class="tag ' + s.verdict + '">' +
+        (s.verdict==='yes'?'go back':s.verdict==='maybe'?'maybe':'not again') + '</span>' : '') + '</p>' +
+      (s.address ? '<p class="when">' + esc(s.address) + '</p>' : '') +
+      '<p class="when">' + prettyDate(s.arrive) + '</p>' +
+      (bits.length ? '<p class="detail">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '') +
+      (s.amenities && s.amenities.length ? '<p class="detail">' + s.amenities.join(', ') + '</p>' : '') +
+      (s.notes ? '<p class="notes">' + esc(s.notes) + '</p>' : '') + '</div>';
+  });
+  html += '</div>';
+
+  /* maintenance report */
+  const recs = data.records.slice().sort((a,b) => b.date.localeCompare(a.date));
+  const totalCost = recs.reduce((c,r) => c + (r.cost || 0), 0);
+  html += '<div class="card"><h2>Maintenance report</h2>' +
+    '<p class="hint">Every job, every date, every mileage. This is the page to print if you ever sell the trailer.</p>' +
+    '<p class="hint">2021 Grand Design Transcend travel trailer &nbsp;·&nbsp; ' +
+    fmt(totalMiles()) + ' miles as of ' + prettyDate(today()) + '</p>';
+  if (!recs.length){
+    html += '<p class="empty">Nothing recorded yet. Add records on the Schedule tab.</p>';
+  } else {
+    recs.forEach(r => {
+      const bits = [];
+      if (r.miles != null) bits.push(fmt(r.miles) + ' miles');
+      if (r.who) bits.push(r.who);
+      if (r.cost != null) bits.push(cash(r.cost));
+      html += '<div class="row"><p class="where">' + esc(r.what) + '</p>' +
+        '<p class="when">' + prettyDate(r.date) + (bits.length ? ' \u2014 ' + esc(bits.join(' · ')) : '') + '</p>' +
+        (r.notes ? '<p class="notes">' + esc(r.notes) + '</p>' : '') +
+        '<div class="acts no-print"><button class="link danger" data-act="delRecord:' + r.id + '">Delete</button></div></div>';
+    });
+    if (totalCost) html += stat('Spent on maintenance', cash(totalCost));
+  }
+  html += '<button class="btn no-print" data-act="print">Print this page</button>' +
+    '<p class="hint no-print" style="margin-top:12px">Keep your receipts in a folder. This report is the list; ' +
+    'the receipts are the proof, and a buyer will want both.</p></div>';
+
+  $('reportBox').innerHTML = html;
+}
+function stat(label, value){
+  return '<div class="stat"><span>' + label + '</span><strong>' + value + '</strong></div>';
+}
+
+/* =========================================================================
+   11. WIRING IT ALL UP
+========================================================================= */
+function render(){
+  drawOdo();
+  renderTrips();
+  renderDue();
+  renderSchedule();
+  renderReports();
+}
+async function save(){ await store.set(JSON.stringify(data)); }
+
+const PANELS = {trips:'panel-trips', due:'panel-due', sched:'panel-sched', report:'panel-report'};
+function showTab(which){
+  ui.tab = which;
+  for (const k in PANELS){
+    $('tab-'+k).setAttribute('aria-selected', k === which);
+    $(PANELS[k]).classList.toggle('hidden', k !== which);
+  }
+  window.scrollTo({top:0});
+}
+Object.keys(PANELS).forEach(k => $('tab-'+k).addEventListener('click', () => showTab(k)));
+
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const [act, arg] = btn.dataset.act.split(':');
+  switch(act){
+    case 'newTrip':        ui.form = 'newTrip'; render(); break;
+    case 'cancelForm':     ui.form = null; ui.editStop = null; render(); break;
+    case 'saveNewTrip':    await saveNewTrip(); break;
+    case 'arrive':         ui.form = 'arrive'; render(); break;
+    case 'saveArrive':     await saveArrive(); break;
+    case 'depart':         ui.form = 'depart'; render(); break;
+    case 'departOn':       await saveDepart(false); break;
+    case 'departHome':     await saveDepart(true); break;
+    case 'saveHome':       await saveHome(); break;
+    case 'editStop':       ui.editStop = arg; ui.form = null; render(); break;
+    case 'saveStop':       await saveStop(arg); break;
+    case 'delStop':        await delStop(arg); break;
+    case 'scrapTrip':      await scrapTrip(arg); break;
+    case 'reopen':         await reopenTrip(arg); break;
+    case 'addOldTrip':     await addOldTrip(); break;
+    case 'openTripDetail': ui.editTrip = (ui.editTrip === arg ? null : arg); render(); break;
+    case 'addFill':        ui.fuelFor = arg; render(); break;
+    case 'cancelFuel':     ui.fuelFor = null; render(); break;
+    case 'saveFill':       await saveFill(arg); break;
+    case 'delFill':        await delFill(btn.dataset.act.slice(8)); break;
+    case 'dismissAlert':   ui.lastAlert = null; render(); break;
+    case 'doneToday':      await doneToday(arg); break;
+    case 'addRecord':      showTab('sched'); setTimeout(() => { $('rc-task').value = arg; $('rc-task').scrollIntoView({behavior:'smooth',block:'center'}); }, 60); break;
+    case 'saveRecord':     await saveRecord(); break;
+    case 'setMiles':       await setMiles(arg); break;
+    case 'delRecord':      await delRecord(arg); break;
+    case 'clearTicks':     data.ticks = {}; await save(); render(); break;
+    case 'print':          window.print(); break;
+    case 'ics':            makeICS(); break;
+    case 'download':       download(); break;
+    case 'restore':        $('fileInput').click(); break;
+  }
+});
+document.addEventListener('change', async e => {
+  const id = e.target.dataset && e.target.dataset.tick;
+  if (!id) return;
+  if (e.target.checked) data.ticks[id] = true; else delete data.ticks[id];
+  await save();
+});
+
+/* ---- calendar file -------------------------------------------------- */
+function icsEscape(s){
+  return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+}
+function icsFold(line){
+  if (line.length <= 74) return line;
+  let out = line.slice(0,74), rest = line.slice(74);
+  while (rest.length){ out += '\r\n ' + rest.slice(0,73); rest = rest.slice(73); }
+  return out;
+}
+function makeICS(){
+  const up = upcoming();
+  if (!up.length){
+    alert('No job has a date on it yet, so there is nothing to put on the calendar. ' +
+          'Mark some jobs done on the Schedule tab first.');
+    return;
+  }
+  const stamp = new Date().toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Trailer Log//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  up.forEach(u => {
+    const day  = u.due.replace(/-/g,'');
+    const next = addDays(u.due,1).replace(/-/g,'');
+    const mi = mileInterval(u.task);
+    let desc = u.task.what + '. From the Grand Design Transcend required maintenance schedule.';
+    if (mi) desc += ' This one also comes due every ' + fmt(mi) + ' miles, whichever happens first.';
+    if (u.task.pro) desc += ' A shop or dealer should do this one.';
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + u.task.id + '-' + day + '@trailerlog');
+    lines.push('DTSTAMP:' + stamp);
+    lines.push('DTSTART;VALUE=DATE:' + day);
+    lines.push('DTEND;VALUE=DATE:' + next);
+    lines.push(icsFold('SUMMARY:' + icsEscape('Trailer: ' + u.task.area.toLowerCase() + ' \u2014 ' + u.task.what)));
+    lines.push(icsFold('DESCRIPTION:' + icsEscape(desc)));
+    lines.push('BEGIN:VALARM');
+    lines.push('TRIGGER:-P7D');
+    lines.push('ACTION:DISPLAY');
+    lines.push(icsFold('DESCRIPTION:' + icsEscape('Trailer maintenance due in a week: ' + u.task.what)));
+    lines.push('END:VALARM');
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+
+  const blob = new Blob([lines.join('\r\n')], {type:'text/calendar'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'trailer-maintenance.ics';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---- backup -------------------------------------------------------- */
+const fileInput = document.createElement('input');
+fileInput.type = 'file'; fileInput.accept = '.json'; fileInput.id = 'fileInput'; fileInput.className = 'hidden';
+document.body.appendChild(fileInput);
+function download(){
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'trailer-log-' + today() + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+fileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const p = JSON.parse(await file.text());
+    if (!Array.isArray(p.trips)) throw new Error('bad');
+    if (!confirm('This replaces everything on this device with the backup. Go ahead?')) return;
+    data = {trips:p.trips, records:p.records||[], custom:p.custom||{}, ticks:p.ticks||{}};
+    await save(); render();
+  } catch(err){ alert('That file did not look like a trailer log backup.'); }
+  e.target.value = '';
+});
+
+/* ---- start up ------------------------------------------------------ */
+(async function start(){
+  const raw = await store.get();
+  if (raw){
+    try { data = JSON.parse(raw); } catch(e){ data = {trips:[],records:[],custom:{},ticks:{}}; }
+    data.trips = data.trips || []; data.records = data.records || [];
+    data.custom = data.custom || {}; data.ticks = data.ticks || {};
+  } else {
+    data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], closed:true}, s));
+    await save();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
