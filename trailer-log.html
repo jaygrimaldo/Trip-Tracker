@@ -294,15 +294,17 @@ async function push(){
 
 let pulling = false;
 async function pull(){
-  if (!cloudOn() || pulling) return;
+  if (!cloudOn() || pulling) return -1;
   /* never redraw underneath someone who is typing */
-  if (ui.form || ui.editStop || ui.fuelFor) return;
+  if (ui.form || ui.editStop || ui.fuelFor) return -1;
   pulling = true;
+  let count = -1;
   try {
     const res = await fetch(CLOUD.url + '/rest/v1/' + CLOUD.table + '?select=id,body,ts,deleted',
       {headers:headers()});
     if (!res.ok) throw new Error(await res.text());
     const remote = await res.json();
+    count = remote.length;
     let changed = false;
     const seen = {};
     remote.forEach(r => {
@@ -328,6 +330,7 @@ async function pull(){
     setSync('No connection. Working from this device.');
   }
   pulling = false;
+  return count;
 }
 
 /* =========================================================================
@@ -675,8 +678,10 @@ function renderTrips(){
     '<button class="link" data-act="download">Save a backup file</button>' +
     '<span style="color:var(--line)">&nbsp;|&nbsp;</span>' +
     '<button class="link" data-act="restore">Load a backup file</button>' +
-    '<p class="hint" style="margin-top:12px">Everything is stored in this browser, on this device only. ' +
-    'A backup file keeps a copy you can move to another phone or computer.</p></div>';
+    '<span style="color:var(--line)">&nbsp;|&nbsp;</span>' +
+    '<button class="link danger" data-act="wipe">Start over</button>' +
+    '<p class="hint" style="margin-top:12px">Everything is kept on this device and, when there is signal, in your ' +
+    'shared log so Roxanna sees it too. A backup file keeps a copy of your own.</p></div>';
 
   box.innerHTML = html;
 }
@@ -1063,6 +1068,30 @@ async function delFill(arg){
   t.fuel = (t.fuel||[]).filter(f => f.id !== fillId);
   await save(); render();
 }
+/* clears this device and the shared log, then starts from the paper trips again */
+async function wipeAll(){
+  if (!confirm('This erases every trip and every maintenance record, here and in the shared log, ' +
+               'on all your devices. The twelve trips from the paper log come back. Are you sure?')) return;
+  if (!confirm('Last chance. This cannot be undone. Really erase everything?')) return;
+  if (cloudOn()){
+    try {
+      setSync('Erasing\u2026');
+      await fetch(CLOUD.url + '/rest/v1/' + CLOUD.table + '?id=neq.__none__',
+        {method:'DELETE', headers:headers({'Prefer':'return=minimal'})});
+    } catch(e){
+      alert('Could not reach the shared log. Try again when you have signal.');
+      return;
+    }
+  }
+  mirror = {}; dirty = new Set();
+  try { localStorage.removeItem(KEY); localStorage.removeItem('trailer-log-v2'); localStorage.removeItem('trailer-log-v1'); } catch(e){}
+  data = {trips:[], records:[], custom:{}, ticks:{}};
+  data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], fuel:[], closed:true}, s));
+  await save();
+  render();
+  setSync('Started over');
+}
+
 function warnIn(id, msg){ const el = $(id); el.textContent = msg; el.classList.remove('hidden'); }
 
 function flagOdoWarnings(){ ui.lastAlert = odoWarning(); }
@@ -1397,6 +1426,7 @@ document.addEventListener('click', async e => {
     case 'ics':            makeICS(); break;
     case 'download':       download(); break;
     case 'restore':        $('fileInput').click(); break;
+    case 'wipe':           await wipeAll(); break;
   }
 });
 document.addEventListener('change', async e => {
@@ -1522,22 +1552,31 @@ function carryOverOldData(){
   let carried = false;
   if (!Object.keys(mirror).length) carried = carryOverOldData();
   rebuildFromMirror();
-
-  if (!data.trips.length && !data.records.length && !carried){
-    data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], fuel:[], closed:true}, s));
-    await save();
-  }
   render();
+
+  const bare = () => !data.trips.length && !data.records.length;
 
   if (cloudOn()){
     setSync('Checking the cloud\u2026');
-    await pull();
+    const rows = await pull();
+    /* only put the paper-log trips in when this device AND the database
+       are both empty. otherwise a second device would add a second set. */
+    if (rows === 0 && bare() && !carried){
+      data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], fuel:[], closed:true}, s));
+      await save();
+      render();
+    }
     setInterval(() => { if (document.visibilityState === 'visible') pull(); }, 20000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') pull();
     });
     window.addEventListener('online', pull);
   } else {
+    if (bare() && !carried){
+      data.trips = SEED.map(s => Object.assign({id:uid('seed'), stops:[], fuel:[], closed:true}, s));
+      await save();
+      render();
+    }
     setSync('This device only. No cloud set up.');
   }
 })();
