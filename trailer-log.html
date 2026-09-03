@@ -423,6 +423,11 @@ const AMENITIES = ['Pool','Hot tub','Pickleball','Playground','Fishing','Lake or
                    'Beach','Laundry','Camp store','Dog park','Wifi','Good cell signal',
                    'Bathhouse','Walking trails','Boat ramp'];
 
+/* The day the trailer left the factory. Any job with no record of being
+   done counts from this day and from zero miles, as if it was last done
+   the day the trailer was built. */
+const FACTORY = { date:'2021-05-01', miles:0 };
+
 const MILE_WARN = 500;   // warn when a mileage job is this close
 const DAY_WARN  = 60;    // warn when a calendar job is this close
 
@@ -521,16 +526,19 @@ function lastRecord(taskId){
   if (!list.length) return null;
   return list.sort((a,b) => b.date.localeCompare(a.date))[0];
 }
+/* the last record for a job, or the factory date if there is none */
+function baseline(taskId){
+  return lastRecord(taskId) || { date:FACTORY.date, miles:FACTORY.miles, factory:true };
+}
 function mileInterval(task){
   const c = data.custom[task.id];
   if (c && c.miles) return c.miles;
   return task.miles || null;
 }
 function statusOf(task){
-  const rec = lastRecord(task.id);
+  const rec = baseline(task.id);
   const mi  = mileInterval(task);
   if (!task.days && !mi) return {state:'event'};
-  if (!rec) return {state:'never'};
 
   let left = null, milesLeft = null;
   if (task.days) left = task.days - daysBetween(rec.date, today());
@@ -548,7 +556,6 @@ function statusOf(task){
   return {state, left, milesLeft, last:rec.date, rec};
 }
 function statusLine(task, s){
-  if (s.state === 'never') return 'No date recorded yet.';
   const bits = [];
   if (s.left != null){
     if (s.left < 0)        bits.push('Overdue by ' + Math.abs(s.left) + ' days');
@@ -559,6 +566,8 @@ function statusLine(task, s){
     bits.push(s.milesLeft < 0 ? fmt(-s.milesLeft) + ' miles past due'
                               : 'or in ' + fmt(s.milesLeft) + ' miles');
   }
+  if (s.rec && s.rec.factory)
+    return bits.join(', ') + '. Never recorded, so counting from the factory date, ' + prettyDate(s.last) + '.';
   return bits.join(', ') + '. Last done ' + prettyDate(s.last) + '.';
 }
 function addDays(iso, n){
@@ -569,9 +578,7 @@ function addDays(iso, n){
 /* the date a job next comes due, or null if we have no starting date */
 function nextDue(task){
   if (!task.days) return null;
-  const rec = lastRecord(task.id);
-  if (!rec) return null;
-  return addDays(rec.date, task.days);
+  return addDays(baseline(task.id).date, task.days);
 }
 /* every dated job, soonest first */
 function upcoming(){
@@ -1151,7 +1158,9 @@ function renderDue(){
   }
   if (nodate.length){
     html += '<p class="hint" style="margin-top:14px">' + nodate.length +
-      ' more jobs have no date on them yet, so they cannot be worked out. Mark them on the Schedule tab.</p>';
+      (nodate.length===1 ? ' job has' : ' jobs have') + ' no record yet, so ' +
+      (nodate.length===1 ? 'it counts' : 'they count') + ' from the day the trailer left the factory, ' +
+      prettyDate(FACTORY.date) + '. Mark a job done and it starts counting from that day instead.</p>';
   }
   html += '<button class="btn" data-act="ics">Put these on your calendar</button>' +
     '<p class="hint" style="margin-top:12px">This makes a calendar file with a reminder a week before each job. ' +
