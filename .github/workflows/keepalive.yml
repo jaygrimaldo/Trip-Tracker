@@ -1,0 +1,23 @@
+# Keeps the Supabase "Camper" database awake.
+# Supabase pauses free databases after about 7 days with no activity.
+# This job reads one row every 3 days, which counts as activity.
+# It can also be run by hand from the Actions tab ("Run workflow").
+
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *"   # every 3 days at 12:00 UTC (8:00 AM Eastern)
+  workflow_dispatch:         # lets you run it by hand from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read one row from the trailer_rows table
+        run: |
+          curl --fail --silent --show-error \
+            "https://wojzaavwrkttwxzydong.supabase.co/rest/v1/trailer_rows?select=id&limit=1" \
+            -H "apikey: sb_publishable_9_EUnkC32s8WkhTa5qHVbA_q2y3UWwH" \
+            -H "Authorization: Bearer sb_publishable_9_EUnkC32s8WkhTa5qHVbA_q2y3UWwH"
+          echo "Supabase ping OK"
