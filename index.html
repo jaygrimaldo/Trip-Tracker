@@ -482,34 +482,52 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
             padding: 8px 0;
             border-bottom: 1px solid var(--border);
             font-size: 0.85rem;
         }
         .queue-item:last-child { border-bottom: none; }
+        .queue-item > div:first-child { min-width: 0; }
         .queue-item .qi-info { color: var(--text); }
         .queue-item .qi-detail { color: var(--text-dim); font-size: 0.75rem; }
         .queue-item .qi-actions {
             display: flex;
-            gap: 4px;
+            align-items: center;
+            gap: 8px;
             flex-shrink: 0;
         }
         .queue-item .qi-edit {
             color: var(--accent);
             background: none;
             border: none;
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             cursor: pointer;
-            padding: 4px 8px;
+            min-width: 40px;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
         }
+        .queue-item .qi-edit:active { background: var(--border); }
+        /* Delete sits well clear of Edit so a mis-tap cannot remove a trip */
         .queue-item .qi-remove {
             color: var(--danger);
             background: none;
             border: none;
-            font-size: 1.1rem;
+            border-left: 1px solid var(--border);
+            font-size: 1.3rem;
             cursor: pointer;
-            padding: 4px 8px;
+            min-width: 56px;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0 8px 8px 0;
+            margin-left: 14px;
         }
+        .queue-item .qi-remove:active { background: var(--border); }
         .queue-clear {
             margin-top: 8px;
             width: 100%;
@@ -1094,6 +1112,7 @@
         `;
         grid.appendChild(row);
         recalc();
+        autoSave();   // adding a day is a click, not an input — save it or it is lost on reload
     }
 
     function removeDay(btn) {
@@ -1105,6 +1124,7 @@
             r.querySelector('.day-label').textContent = `Day ${i + 1}`;
         });
         recalc();
+        autoSave();   // same here — removing a day must persist
     }
 
     // ── Miles ──
