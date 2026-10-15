@@ -670,7 +670,7 @@
     <h1>🚌 Trip Tracker</h1>
     <div style="display:flex; align-items:center; gap:8px;">
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Night</button>
-        <span class="version">v2.2</span>
+        <span class="version">v2.3</span>
     </div>
 </div>
 
@@ -954,6 +954,13 @@
     const AUTOSAVE_KEY = 'tripTracker_autosave';
     const QUEUE_KEY = 'tripTracker_queue';
 
+    // While the saved trip is being put back on screen, autoSave must not run.
+    // Restoring calls setDivision() and setStatus(), and both of those save.
+    // They used to fire BEFORE the day rows were rebuilt, so they wrote a
+    // one-day trip over a saved multi-day one. The screen looked right; the
+    // storage did not. The next reload then showed a single day.
+    let restoring = false;
+
     // ── Init ──
     document.addEventListener('DOMContentLoaded', () => {
         // Load queue from storage
@@ -967,6 +974,7 @@
         try {
             const auto = localStorage.getItem(AUTOSAVE_KEY);
             if (auto) {
+                restoring = true;
                 const s = JSON.parse(auto);
                 if (s.driveNumber) document.getElementById('driveNumber').value = s.driveNumber;
                 if (s.vehicle) document.getElementById('vehicle').value = s.vehicle;
@@ -1013,16 +1021,20 @@
                     });
                 }
                 recalc();
+                restoring = false;
+                autoSave();   // the screen is correct now, so make storage match it
                 return; // Skip default date set
             }
         } catch(e) {}
 
+        restoring = false;
         // Default: leave start date blank (user fills it in per trip)
         recalc();
     });
 
     // ── Auto-Save (called on every change) ──
     function autoSave() {
+        if (restoring) return;   // never save a half-rebuilt form over the real one
         try {
             const rows = document.querySelectorAll('.hours-row');
             const days = Array.from(rows).map(row => ({
